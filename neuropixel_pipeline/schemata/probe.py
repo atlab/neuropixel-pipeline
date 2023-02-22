@@ -105,7 +105,7 @@ class ProbeType(dj.Lookup):
         Electrode numbering is 1-indexing
         """
 
-        for probe_type, probe_config for neuropixels_probes_config.items():
+        for probe_type, probe_config in neuropixels_probes_config.items():
             electrode_layouts = build_electrode_layouts(probe_type=probe_type, **probe_config)
         
         with ProbeType.connection.transaction:
