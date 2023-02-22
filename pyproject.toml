@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuropixel_pipeline"
+authors = [
+    {name = "Christos papadopoulos", email = "cpapadop@bcm.edu"},
+]
+description = "Schemata and libraries for ingesting and clustering Neuropixel data"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["neuropixel", "neuroscience", "pipeline"]
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "datajoint==0.12.9",
+    "numpy",
+]
+dynamic = ["version"]
+
+[tool.setuptools]
+packages = ["neuropixel_pipeline"]
+
+[tool.setuptools.dynamic]
+version = {attr = "neuropixel_pipeline.__version__"}
