@@ -3,4 +3,5 @@
 from setuptools import setup
 
 # Configuration is specified in pyproject.toml, which is used here as well
-setup()
+if __name__ == "__main__":
+    setup()

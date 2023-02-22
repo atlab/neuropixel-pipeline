@@ -1,6 +1,6 @@
 from . import readers
 
-from . import schemata
+# from . import schemata
 
 from .version import __version__
 

@@ -194,7 +194,7 @@ class ClusteringParamSet(dj.Lookup):
     params: longblob  # dictionary of all applicable parameters
     """
 
-
+# TODO: Will revisit the necessity of this, or put as a separate table
 @schema
 class ClusterQualityLabel(dj.Lookup):
     """Quality label for each spike sorted cluster.
@@ -258,6 +258,19 @@ class Clustering(dj.Imported):
     """
 
 
+# Probably more layers above this are useful (for multiple users per curation, auto-curation maybe, etc.)
+# Also further downstream to keep in mind what would be necessary to fully ingest phy (https://github.com/cortex-lab/phy)
+#   "The [phy] GUI keeps track of all decisions in a file called phy.log"
+@schema
+class CurationType(dj.Lookup): # Table definition subject to change
+    definition = """
+    # Type of curation performed on the clustering
+    curation: varchar(16)
+    ---
+    """
+
+    contents = zip(["no curation"])
+
 @schema
 class Curation(dj.Manual): # TODO: Would 0 mean no curation, or is a different design for the key better
     """Curation procedure table.
@@ -280,11 +293,12 @@ class Curation(dj.Manual): # TODO: Would 0 mean no curation, or is a different d
     curation_time: datetime             # time of generation of this set of curated clustering results
     curation_output_dir: varchar(255)   # output directory of the curated results, relative to root data directory
     quality_control: bool               # has this clustering result undergone quality control?
-    manual_curation: bool               # has manual curation been performed on this clustering result?
+    -> CurationType                     # what type of curation has been performed on this clustering result?
     curation_note='': varchar(2000)
     """
 
 
+# TODO: Remove longblob types, replace with external-attach (or some form of this)
 @schema
 class CuratedClustering(dj.Imported):
     """Clustering results after curation.
@@ -319,8 +333,8 @@ class CuratedClustering(dj.Imported):
         ---
         -> probe.ElectrodeConfig.Electrode  # electrode with highest waveform amplitude for this unit
         -> ClusterQualityLabel
-        spike_count: int         # how many spikes in this recording for this unit
-        spike_times: longblob    # (s) spike times of this unit, relative to the start of the EphysRecording
+        spike_count : int         # how many spikes in this recording for this unit
+        spike_times : longblob    # (s) spike times of this unit, relative to the start of the EphysRecording
         spike_sites : longblob   # array of electrode associated with each spike
         spike_depths=null : longblob  # (um) array of depths associated with each spike, relative to the (0, 0) of the probe
         """
@@ -377,7 +391,10 @@ class WaveformSet(dj.Imported):
         waveforms=null: longblob  # (uV) (spike x sample) waveforms of a sampling of spikes at the given electrode for the given unit
         """
 
-
+# important to note the original source of these quality metrics:
+#   https://allensdk.readthedocs.io/en/latest/
+#   https://github.com/AllenInstitute/ecephys_spike_sorting
+#   
 @schema
 class QualityMetrics(dj.Imported):
     """Clustering and waveform quality metrics.
