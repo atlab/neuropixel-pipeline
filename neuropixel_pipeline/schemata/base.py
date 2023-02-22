@@ -19,6 +19,6 @@ class Session(dj.Manual):
 @schema
 class SkullReference(dj.Lookup):
     definition = """
-    # SkullReference, not actually sure where this table comes from in the element
-    reference: int
+    skull_reference   : varchar(60)
     """
+    contents = zip(["Bregma", "Lambda"])

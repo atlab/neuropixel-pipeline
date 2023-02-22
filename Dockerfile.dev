@@ -1,0 +1,9 @@
+FROM docker/dev-environments-default:stable-1
+
+RUN apt-get update && \
+    apt-get install -y build-essential python3-dev python3-pip graphviz
+
+RUN pip3 install ipykernel && \
+    python3 -m ipykernel install
+
+# Need to install CUDA as well

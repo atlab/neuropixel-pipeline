@@ -3,7 +3,10 @@ services:
     entrypoint:
     - sleep
     - infinity
-    image: docker/dev-environments-default:stable-1
+    image: neuropixel-pipeline-dev:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     init: true
     volumes:
     - type: bind
