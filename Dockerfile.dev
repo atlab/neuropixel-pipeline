@@ -1,9 +1,18 @@
-FROM docker/dev-environments-default:stable-1
+# FROM docker/dev-environments-default:stable-1
+FROM ubuntu:focal
 
-RUN apt-get update && \
-    apt-get install -y build-essential python3-dev python3-pip graphviz
+# Avoid issues by switching to noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN pip3 install ipykernel && \
-    python3 -m ipykernel install
+# RUN apt-get update && \
+#     apt-get install -y build-essential python3-dev python3-pip graphviz
+
+# RUN pip3 install ipykernel && \
+#     python3 -m ipykernel install
 
 # Need to install CUDA as well
+
+WORKDIR /workspaces
+COPY . neuropixel-pipeline
+WORKDIR /workspaces/neuropixel-pipeline
+RUN pip3 install .
