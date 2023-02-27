@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,6 +20,12 @@ dependencies = [
     "numpy",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+# This also needs pykilosort-requirements.txt to be installed manually (for now), can likely just add them here directly if nothing else
+kilosort = ["pykilosort @ git+https://github.com/MouseLand/pykilosort"]
+# switch to cupy-cuda110 for CUDA 11.0, also just "cupy" seems to fail because cuda isn't found on the dev environment system at all
+cuda = ["nvidia-cuda-runtime-cu11", "nvidia-cuda-nvcc-cu11"]
 
 [tool.setuptools]
 packages = ["neuropixel_pipeline"]
