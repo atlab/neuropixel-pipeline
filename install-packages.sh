@@ -1,8 +1,8 @@
 #!/bin/bash
-set -eo pipefail
+set -e
 
-apt-get update && \
-    apt-get install -y build-essential graphviz
+sudo apt-get update && \
+    sudo apt-get install -y build-essential graphviz
 
 pip3 install -r pykilosort-requirements.txt
 pip3 install -e '.[kilosort,cuda]'
