@@ -5,7 +5,10 @@ https://github.com/MouseLand/pykilosort
 
 import pathlib
 import pykilosort
+import numpy as np
 
+# params here is really just **kwargs for the Kilosort class
+# https://github.com/MouseLand/pykilosort/blob/5712cfd2722a20554fa5077dd8699f68508d1b1a/pykilosort/main.py#L25-L303
 def run_pykilosort(
     continuous_file,
     kilosort_output_directory,
@@ -33,8 +36,8 @@ def run_pykilosort(
         dir_path=dat_path.parent,
         output_dir=kilosort_output_directory,
         probe=probe,
-        params=params,
         n_channels=probe.Nchan,
         dtype=np.int16,
         sample_rate=sample_rate,
+        params=params,
     )
