@@ -26,7 +26,7 @@ def run_pykilosort(
     channel_count = len(channel_ind)
     probe.Nchan = channel_count
     probe.NchanTOT = channel_count
-    probe.chanMap = np.arange(0, channel_count, dtype="int")
+    probe.chanMap = channel_ind.astype(int)
     probe.xc = x_coords
     probe.yc = y_coords
     probe.kcoords = shank_ind
