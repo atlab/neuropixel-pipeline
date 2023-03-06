@@ -4,4 +4,4 @@ from . import readers
 
 from .version import __version__
 
-# Datajoint longblobs and external-blobs should likely not be used in tables here (external-attach is fine though).
+# None of Datajoint longblobs, external-blobs, attach, filepath, and attribute adapters should be used.
