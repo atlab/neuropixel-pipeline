@@ -1,6 +1,9 @@
+# flake8: noqa
+
 """
 Neuropixels Probes
 """
+
 from __future__ import annotations
 
 import datajoint as dj
@@ -60,7 +63,7 @@ neuropixels_probes_config = {
 class ProbeType(dj.Lookup):
     """Type of probe.
     Attributes:
-        probe_type (foreign key, varchar (32) ): Name of the probe type.
+        probe_type ( varchar (32) ): Name of the probe type.
     """
 
     definition = """
@@ -117,7 +120,7 @@ class ProbeType(dj.Lookup):
 class Probe(dj.Lookup):
     """Represent a physical probe with unique ID
     Attributes:
-        probe (foreign key, varchar(32) ): Unique ID for this model of the probe.
+        probe ( varchar(32) ): Unique ID for this model of the probe.
         ProbeType (dict): ProbeType entry.
         probe_comment ( varchar(1000) ): Comment about this model of probe.
     """
