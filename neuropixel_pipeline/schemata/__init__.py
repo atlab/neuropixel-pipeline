@@ -1,4 +1,5 @@
-from . import ephys
+from . import base
 from . import probe
+from . import ephys
 
-__all__ = ["ephys", "probe"]
+__all__ = ["base", "probe", "ephys"]

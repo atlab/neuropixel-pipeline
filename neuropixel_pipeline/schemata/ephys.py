@@ -5,8 +5,13 @@ from decimal import Decimal
 import datajoint as dj
 from . import base
 from . import probe
+from .. import ingest
 
 schema = dj.schema('neuropixel_ephys')
+
+def run_populate():
+    
+    pass
 
 # ----------------------------- Table declarations ----------------------
 

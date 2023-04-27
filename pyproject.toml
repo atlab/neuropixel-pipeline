@@ -19,7 +19,8 @@ dependencies = [
     "pydantic>=2.0a1",
     "devtools",
     "datajoint==0.12.9",
-    "numpy",
+    "numpy==1.23", # currently needed to deal with np.float deprecation in datajoint
+    "h5py"
 ]
 dynamic = ["version"]
 

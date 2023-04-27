@@ -9,6 +9,10 @@ import datajoint as dj
 
 schema = dj.schema('neuropixel_base')
 
+def run_populate():
+    # temporary test value
+    Session.insert1((0,), skip_duplicates=True)
+
 @schema
 class Session(dj.Manual):
     definition = """
