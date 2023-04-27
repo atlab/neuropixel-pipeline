@@ -175,6 +175,7 @@ class ClusteringMethod(dj.Lookup):
         ("kilosort2", "kilosort2 clustering method"),
         ("kilosort2.5", "kilosort2.5 clustering method"),
         ("kilosort3", "kilosort3 clustering method"),
+        ("kilosort4", "kilosort4 clustering method")
     ]
 
 

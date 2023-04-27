@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datajoint as dj
 import numpy as np
-from ..metadata import neuropixels_probes_config
+from ..metadata import neuropixel_probes_config
 
 schema = dj.schema('neuropixel_probe')
 
@@ -70,7 +70,7 @@ class ProbeType(dj.Lookup):
         Electrode numbering is 1-indexing
         """
 
-        for probe_config in neuropixels_probes_config:
+        for probe_config in neuropixel_probes_config:
             electrode_layouts = probe_config.build_electrode_layouts()
 
             with ProbeType.connection.transaction:

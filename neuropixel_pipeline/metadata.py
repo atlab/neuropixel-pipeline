@@ -23,8 +23,9 @@ class NeuropixelConfig(BaseModel): # Add the docstrings from build_electrode_lay
     y_origin: str = "bottom"
 
     def build_electrode_layout(self):
-        """Electrode layout building will be moved here, while likely also return a different Model"""
+        """Will likely want to change this to a (different) Model instead"""
         row_count = int(self.site_count_per_shank / self.col_count_per_shank)
+        # self._spacing or 1 is not a good idea with floats
         x_coords = np.tile(
             np.arange(0, (self.col_spacing or 1) * self.col_count_per_shank, (self.col_spacing or 1)),
             row_count,
@@ -57,7 +58,7 @@ class NeuropixelConfig(BaseModel): # Add the docstrings from build_electrode_lay
         ]
 
 
-neuropixels_probes_config = [
+neuropixel_probes_config = [
     NeuropixelConfig(
         probe_type="neuropixels 1.0 - 3A",
         site_count_per_shank=960,
@@ -112,4 +113,4 @@ neuropixels_probes_config = [
 
 if __name__ == "__main__":
     from devtools import debug
-    debug(neuropixels_probes_config)
+    debug(neuropixel_probes_config)

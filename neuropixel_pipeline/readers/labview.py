@@ -9,7 +9,9 @@ import h5py
 from pathlib import Path
 from pydantic import BaseModel
 
-class LabviewNeuropixelMetadata(BaseModel):
+from .kilosort import Kilosort
+
+class LabviewNeuropixelMetadata(Kilosort, BaseModel):
     pass
 
     def from_h5(directory: Path, family: str = 'NPElectrophysiology%d.h5') -> LabviewNeuropixelMetadata:

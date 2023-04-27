@@ -20,7 +20,9 @@ dependencies = [
     "devtools",
     "datajoint==0.12.9",
     "numpy==1.23", # currently needed to deal with np.float deprecation in datajoint
-    "h5py"
+    "polars",
+    "pandas",
+    "h5py",
 ]
 dynamic = ["version"]
 
