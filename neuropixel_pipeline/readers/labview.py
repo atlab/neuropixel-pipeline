@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import h5py
 from pathlib import Path
-from pydantic import BaseModel, Field, validator, constr
+from pydantic import BaseModel, Field, field_validator, constr
 from typing import List
 import numpy as np
 
@@ -22,16 +22,28 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
 
     #
     frequency: float = Field(alias="Fs")
+
+    #
+    channel_names: List[str] = Field(alias="channelNames")
+
+    #
+    class_name: str = Field(alias="class")
+
+    #
     scale: np.ndarray
+
+    #
     t0: float
+
+    #
     config_params: List[str] = Field(alias="ConfigParams")
 
-    @validator("config_params", pre=True)
+    @field_validator("config_params", "channel_names", mode='before')
     def convert_to_list(cls, v):
         if isinstance(v, bytes):
-            return v.split(b",")
+            return v.decode().strip().split(",")
         elif isinstance(v, str):
-            return v.split(",")
+            return v.strip().split(",")
         else:
             return v
 
