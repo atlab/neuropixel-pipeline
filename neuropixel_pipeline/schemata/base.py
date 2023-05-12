@@ -7,11 +7,13 @@ however this might instead transform into a wrapping schema that centralizes all
 
 import datajoint as dj
 
-schema = dj.schema('neuropixel_base')
+schema = dj.schema("neuropixel_base")
+
 
 def run_populate():
     # temporary test value
     Session.insert1((0,), skip_duplicates=True)
+
 
 @schema
 class Session(dj.Manual):
@@ -19,6 +21,7 @@ class Session(dj.Manual):
     # Session: table connection
     session_id : int unsigned # Session primary key
     """
+
 
 @schema
 class SkullReference(dj.Lookup):

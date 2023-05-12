@@ -11,16 +11,19 @@ from pydantic import BaseModel
 
 from .kilosort import Kilosort
 
+
 class LabviewNeuropixelMetadata(Kilosort, BaseModel):
     pass
 
-    def from_h5(directory: Path, family: str = 'NPElectrophysiology%d.h5') -> LabviewNeuropixelMetadata:
+    def from_h5(
+        directory: Path, family: str = "NPElectrophysiology%d.h5"
+    ) -> LabviewNeuropixelMetadata:
         """
         Uses an h5 family driver if necessary
         """
 
-        meta_file = directory / 'NPElectrophysiology%d.h5'
-        with h5py.File(meta_file, driver='family', memb_size=0) as f:
+        meta_file = directory / "NPElectrophysiology%d.h5"
+        with h5py.File(meta_file, driver="family", memb_size=0) as f:
             meta = dict(f.attrs)
 
         print(meta)
@@ -31,4 +34,6 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel):
         """
         This will be implemented when the metadata from labview is separated from the h5.
         """
-        raise NotImplementedError('This will be implemented when the metadata from labview is separated from the h5')
+        raise NotImplementedError(
+            "This will be implemented when the metadata from labview is separated from the h5"
+        )

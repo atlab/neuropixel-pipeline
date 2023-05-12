@@ -9,8 +9,10 @@ from pydantic import BaseModel
 # This is much like what it already does, but properly kept separate from the rest of the pipeline
 # code.
 
+
 class ProbeMeta(BaseModel):
     ...
+
 
 class ConfigLabview(ProbeMeta):
     ...

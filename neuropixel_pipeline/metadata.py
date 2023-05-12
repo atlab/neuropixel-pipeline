@@ -1,8 +1,15 @@
-# from typing import 
-from pydantic import BaseModel
+from __future__ import annotations
+
+from pydantic import BaseModel, PositiveInt, constr, condecimal
+from typing import Optional, Self, List
+from enum import Enum
+from datetime import datetime
 import numpy as np
 
-class NeuropixelConfig(BaseModel): # Add the docstrings from build_electrode_layouts method
+
+class NeuropixelConfig(
+    BaseModel
+):  # Add the docstrings from build_electrode_layouts method
     # probe type (e.g., "neuropixels 1.0 - 3A").
     probe_type: str
     # site count per shank.
@@ -27,10 +34,16 @@ class NeuropixelConfig(BaseModel): # Add the docstrings from build_electrode_lay
         row_count = int(self.site_count_per_shank / self.col_count_per_shank)
         # self._spacing or 1 is not a good idea with floats
         x_coords = np.tile(
-            np.arange(0, (self.col_spacing or 1) * self.col_count_per_shank, (self.col_spacing or 1)),
+            np.arange(
+                0,
+                (self.col_spacing or 1) * self.col_count_per_shank,
+                (self.col_spacing or 1),
+            ),
             row_count,
         )
-        y_coords = np.repeat(np.arange(row_count) * (self.row_spacing or 1), self.col_count_per_shank)
+        y_coords = np.repeat(
+            np.arange(row_count) * (self.row_spacing or 1), self.col_count_per_shank
+        )
 
         if self.white_spacing is not None:
             x_white_spaces = np.tile(
@@ -57,60 +70,123 @@ class NeuropixelConfig(BaseModel): # Add the docstrings from build_electrode_lay
             )
         ]
 
+    @classmethod
+    def configs(cls) -> List[Self]:
+        return [
+            cls(
+                probe_type="neuropixels 1.0 - 3A",
+                site_count_per_shank=960,
+                col_spacing=32,
+                row_spacing=20,
+                white_spacing=16,
+                col_count_per_shank=2,
+                shank_count=1,
+                shank_spacing=0,
+            ),
+            cls(
+                probe_type="neuropixels 1.0 - 3B",
+                site_count_per_shank=960,
+                col_spacing=32,
+                row_spacing=20,
+                white_spacing=16,
+                col_count_per_shank=2,
+                shank_count=1,
+                shank_spacing=0,
+            ),
+            cls(
+                probe_type="neuropixels UHD",
+                site_count_per_shank=384,
+                col_spacing=6,
+                row_spacing=6,
+                white_spacing=0,
+                col_count_per_shank=8,
+                shank_count=1,
+                shank_spacing=0,
+            ),
+            cls(
+                probe_type="neuropixels 2.0 - SS",
+                site_count_per_shank=1280,
+                col_spacing=32,
+                row_spacing=15,
+                white_spacing=0,
+                col_count_per_shank=2,
+                shank_count=1,
+                shank_spacing=250,
+            ),
+            cls(
+                probe_type="neuropixels 2.0 - MS",
+                site_count_per_shank=1280,
+                col_spacing=32,
+                row_spacing=15,
+                white_spacing=0,
+                col_count_per_shank=2,
+                shank_count=4,
+                shank_spacing=250,
+            ),
+        ]
 
-neuropixel_probes_config = [
-    NeuropixelConfig(
-        probe_type="neuropixels 1.0 - 3A",
-        site_count_per_shank=960,
-        col_spacing=32,
-        row_spacing=20,
-        white_spacing=16,
-        col_count_per_shank=2,
-        shank_count=1,
-        shank_spacing=0,
-    ),
-    NeuropixelConfig(
-        probe_type="neuropixels 1.0 - 3B",
-        site_count_per_shank=960,
-        col_spacing=32,
-        row_spacing=20,
-        white_spacing=16,
-        col_count_per_shank=2,
-        shank_count=1,
-        shank_spacing=0,
-    ),
-    NeuropixelConfig(
-        probe_type="neuropixels UHD",
-        site_count_per_shank=384,
-        col_spacing=6,
-        row_spacing=6,
-        white_spacing=0,
-        col_count_per_shank=8,
-        shank_count=1,
-        shank_spacing=0,
-    ),
-    NeuropixelConfig(
-        probe_type="neuropixels 2.0 - SS",
-        site_count_per_shank=1280,
-        col_spacing=32,
-        row_spacing=15,
-        white_spacing=0,
-        col_count_per_shank=2,
-        shank_count=1,
-        shank_spacing=250,
-    ),
-    NeuropixelConfig(
-        probe_type="neuropixels 2.0 - MS",
-        site_count_per_shank=1280,
-        col_spacing=32,
-        row_spacing=15,
-        white_spacing=0,
-        col_count_per_shank=2,
-        shank_count=4,
-        shank_spacing=250,
-    ),
-]
 
-if __name__ == "__main__":
-    from devtools import debug
-    debug(neuropixel_probes_config)
+class PreClusteringData(BaseModel):
+    session_id: PositiveInt
+    probe: ProbeData
+    shank: ShankData = None  # will eventually have multiple shanks per probe
+
+
+class AcquisitionSoftware(BaseModel):
+    acq_software: constr(max_length=24)
+
+
+class ProbeData(BaseModel):
+    probe: constr(
+        max_length=32
+    )  # unique indentifier for this model of probe, serial number
+
+
+class ShankData(BaseModel):
+    pass
+
+
+class SkullReferenceValue(Enum, str):
+    BREGMA = "Bregma"
+    LAMBDA = "Lambda"
+
+
+class InsertionData(BaseModel):
+    # (um) anterior-posterior; ref is 0; more anterior is more positive
+    ap_location: condecimal(max_digits=6, decimal_places=2)
+
+    # (um) medial axis; ref is 0 ; more right is more positive
+    ml_location: condecimal(max_digits=6, decimal_places=2)
+
+    # (um) manipulator depth relative to surface of the brain (0); more ventral is more negative
+    depth: condecimal(max_digits=6, decimal_places=2)
+
+    # SkullReference, can be coerced from a str
+    skull_reference: SkullReferenceValue = "Bregma"
+
+    # (deg) - elevation - rotation about the ml-axis [0, 180] - w.r.t the z+ axis
+    theta: Optional[condecimal(max_digits=5, decimal_places=2)] = None
+
+    # (deg) - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis
+    phi: Optional[condecimal(max_digits=5, decimal_places=2)] = None
+
+    # (deg) rotation about the shank of the probe [-180, 180] - clockwise is increasing in degree - 0 is the probe-front facing anterior
+    beta: Optional[condecimal(max_digits=5, decimal_places=2)] = None
+
+
+class EphysRecordingData(BaseModel):
+    sampling_rate: float
+    recording_datetime: datetime
+    recording_duration: float
+
+    class EphysFilePath(BaseModel):
+        file_path: constr(max_length=255)
+
+
+class LFPData(BaseModel):  # local field potentials
+    lfp_sampling_rate: float
+    lfp_time_stamps: List[datetime]
+    lfp_mean: List[float]
+
+    class ElectrodeData(BaseModel):
+        lfp: List[float]  # recorded lfp at this electrode

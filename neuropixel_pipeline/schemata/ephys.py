@@ -7,13 +7,65 @@ from . import base
 from . import probe
 from .. import ingest
 
-schema = dj.schema('neuropixel_ephys')
+schema = dj.schema("neuropixel_ephys")
 
-def run_populate():
-    
+from pydantic import BaseModel
+
+
+class PreClusteringData(BaseModel):
     pass
 
+
+class ShankData(BaseModel):
+    pass
+
+
+class ProbeData(BaseModel):
+    session_id: int
+    shank: ShankData
+
+
+def run_populate():
+    AcquisitionSoftware  # no populate necessary
+
+    probe_insertion = dict(
+        session_id=0,
+        insertion_number=0,
+        shank_number=None,  # needs to be added as a key?
+        probe=None,
+    )
+    ProbeInsertion.insert1(probe_insertion)
+
+    InsertionLocation.insert1(
+        dict(
+            **probe_insertion,
+            skull_reference="Bregma",  # will it always be Bregma?
+            ap_location=None,  # from kilosort metadata
+            ml_location=None,  # from kilosort metadata
+            depth=None,  # from kilosort metadata
+            theta=None,  # nullable?
+            phi=None,  # nullable?
+            beta=None,  # nullable?
+        )
+    )
+
+    # EphysRecording.insert1(dict(
+    #         # Ephys recording from a probe insertion for a given session.
+    #     **probe_insertion,
+
+    #     probe.ElectrodeConfig,
+    #     "LabviewV1", # this is technically labview specific, so it'd be better to have some abstraction over the acquisition software for the other labs
+    #     sampling_rate: float # (Hz)
+    #     recording_datetime: datetime # datetime of the recording from this probe
+    #     recording_duration: float # (seconds) duration of the recording from this probe
+    # ))
+
+
 # ----------------------------- Table declarations ----------------------
+
+
+# ------------ Pre-Clustering --------------
+
 
 @schema
 class AcquisitionSoftware(dj.Lookup):
@@ -26,7 +78,7 @@ class AcquisitionSoftware(dj.Lookup):
     definition = """  # Software used for recording of neuropixels probes
     acq_software: varchar(24)
     """
-    contents = zip(["LabviewSaumil", "SpikeGLX", "Open Ephys"])
+    contents = zip(["LabviewV1", "SpikeGLX", "Open Ephys"])
 
 
 @schema
@@ -175,7 +227,7 @@ class ClusteringMethod(dj.Lookup):
         ("kilosort2", "kilosort2 clustering method"),
         ("kilosort2.5", "kilosort2.5 clustering method"),
         ("kilosort3", "kilosort3 clustering method"),
-        ("kilosort4", "kilosort4 clustering method")
+        ("kilosort4", "kilosort4 clustering method"),
     ]
 
 
@@ -201,6 +253,7 @@ class ClusteringParamSet(dj.Lookup):
     unique index (param_set_hash)
     params: longblob  # dictionary of all applicable parameters
     """
+
 
 # TODO: Will revisit the necessity of this, or put as a separate table
 @schema
@@ -270,7 +323,7 @@ class Clustering(dj.Imported):
 # Also further downstream to keep in mind what would be necessary to fully ingest phy (https://github.com/cortex-lab/phy)
 #   "The [phy] GUI keeps track of all decisions in a file called phy.log"
 @schema
-class CurationType(dj.Lookup): # Table definition subject to change
+class CurationType(dj.Lookup):  # Table definition subject to change
     definition = """
     # Type of curation performed on the clustering
     curation: varchar(16)
@@ -279,8 +332,11 @@ class CurationType(dj.Lookup): # Table definition subject to change
 
     contents = zip(["no curation"])
 
+
 @schema
-class Curation(dj.Manual): # TODO: Would 0 mean no curation, or is a different design for the key better
+class Curation(
+    dj.Manual
+):  # TODO: Would 0 mean no curation, or is a different design for the key better
     """Curation procedure table.
 
     Attributes:
@@ -399,10 +455,11 @@ class WaveformSet(dj.Imported):
         waveforms=null: longblob  # (uV) (spike x sample) waveforms of a sampling of spikes at the given electrode for the given unit
         """
 
+
 # important to note the original source of these quality metrics:
 #   https://allensdk.readthedocs.io/en/latest/
 #   https://github.com/AllenInstitute/ecephys_spike_sorting
-#   
+#
 @schema
 class QualityMetrics(dj.Imported):
     """Clustering and waveform quality metrics.

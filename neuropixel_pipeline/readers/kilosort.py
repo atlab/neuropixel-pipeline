@@ -90,7 +90,7 @@ class Kilosort:
                         value = float(value)
                     except ValueError:
                         pass
-            return value      
+            return value
 
         self._data = {}
         for kilosort_filename in Kilosort.kilosort_files:
