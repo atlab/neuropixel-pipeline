@@ -137,9 +137,8 @@ class AcquisitionSoftware(BaseModel):
 
 
 class ProbeData(BaseModel):
-    probe: constr(
-        max_length=32
-    )  # unique indentifier for this model of probe, serial number
+    # unique indentifier for this model of probe, serial number
+    probe: constr(max_length=32)
 
 
 class ShankData(BaseModel):
