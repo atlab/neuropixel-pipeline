@@ -38,7 +38,7 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
     #
     config_params: List[str] = Field(alias="ConfigParams")
 
-    @field_validator("config_params", "channel_names", mode='before')
+    @field_validator("config_params", "channel_names", mode="before")
     def convert_to_list(cls, v):
         if isinstance(v, bytes):
             return v.decode().strip().split(",")
