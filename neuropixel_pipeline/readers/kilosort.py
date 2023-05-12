@@ -11,7 +11,6 @@ log = logging.getLogger(__name__)
 
 
 class Kilosort:
-
     _kilosort_core_files = [
         "params.py",
         "amplitudes.npy",
