@@ -16,7 +16,7 @@ class StoresConfig(BaseModel):
     stores: Dict[str, Store]
 
     class Store(BaseModel):
-        protocol: DatajointStoreProtocol
+        protocol: DatajointStoreProtocol = 'file'
         location: Path
         stage: Path
 
