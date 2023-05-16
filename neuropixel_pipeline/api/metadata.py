@@ -139,7 +139,7 @@ class ProbeData(BaseModel):
     probe: constr(max_length=32)
 
 
-class SkullReferenceValue(Enum, str):
+class SkullReferenceValue(str, Enum):
     BREGMA = "Bregma"
     LAMBDA = "Lambda"
 

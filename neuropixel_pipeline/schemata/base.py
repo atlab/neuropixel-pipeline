@@ -9,6 +9,7 @@ import datajoint as dj
 
 schema = dj.schema("neuropixel_base")
 
+
 # TODO: connect session with upstream
 @schema
 class Session(dj.Manual):

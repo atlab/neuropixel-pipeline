@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datajoint as dj
 import numpy as np
+
 # from ..api.metadata import NeuropixelConfig
 
 schema = dj.schema("neuropixel_probe")

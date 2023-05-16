@@ -72,6 +72,6 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
 
     def channels(self) -> List[int]:
         return list(int(channel_name[-4:]) for channel_name in self.channel_names)
-    
+
     def to_metadata(self) -> NeuropixelConfig:
         pass

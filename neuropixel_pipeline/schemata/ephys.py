@@ -8,11 +8,21 @@ import datajoint as dj
 from . import base
 from . import probe
 from ..api import metadata
+from . import dj_utils
 from pathlib import Path
 from typing import List
 from pydantic import BaseModel, PositiveInt
 
 schema = dj.schema("neuropixel_ephys")
+
+# TODO: Define config stores (pydantic serialization is a better alternative to the adapter side of things though)
+# TODO: Also, decide whether the external blob is fine rather than file paths (or find an abstraction over filepaths & the data types we're interested in, basically everthing with longblob)
+#       Maybe just some identifier based on Class (Table) name + field name?
+stores = {
+    '': {}
+}
+dj_utils.StoresConfig(stores).set_dj_config()
+
 
 class Populate:
     def run(data: dict):
@@ -43,7 +53,6 @@ class Populate:
 class PreClusteringData(BaseModel, from_attributes=True):
     session_id: PositiveInt
     probe: metadata.ProbeData
-
 
 
 ### ----------------------------- Table declarations ----------------------
@@ -118,24 +127,28 @@ class EphysRecording(dj.Imported):
         """
 
     @classmethod
-    def read_metadatas(cls, directories: List[Path]) -> List[metadata.LabviewNeuropixelMetadata]:
+    def read_metadatas(
+        cls, directories: List[Path]
+    ) -> List[metadata.LabviewNeuropixelMetadata]:
         labview_metadatas = []
         for session_dir in directories:
-            labview_metadatas.append(metadata.LabviewNeuropixelMetadata.from_h5(session_dir))
+            labview_metadatas.append(
+                metadata.LabviewNeuropixelMetadata.from_h5(session_dir)
+            )
         return labview_metadatas
-    
+
     @classmethod
     def fill(cls, probe_insertion, directories: List[Path]):
         record = dict(
             **probe_insertion,
-            
         )
 
     def make(self, key):
         """Populates table with electrophysiology recording information."""
-        raise NotImplementedError("currently the way to get session filepaths is too flexible")
-        
-        
+        raise NotImplementedError(
+            "currently the way to get session filepaths is too flexible"
+        )
+
 
 @schema
 class LFP(dj.Imported):
@@ -162,6 +175,7 @@ class LFP(dj.Imported):
 
     def make(self, key):
         pass
+
 
 # ------------ Clustering --------------
 
