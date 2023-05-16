@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field, field_validator, constr
 from typing import List
 import numpy as np
 
+from ..api.metadata import NeuropixelConfig
+
 from .kilosort import Kilosort
 
 
@@ -21,7 +23,7 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
     version: float = Field(alias="Version")
 
     #
-    frequency: float = Field(alias="Fs")
+    sampling_rate: float = Field(alias="Fs")
 
     #
     channel_names: List[str] = Field(alias="channelNames")
@@ -67,3 +69,9 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
         raise NotImplementedError(
             "This will be implemented when the metadata from labview is separated from the h5"
         )
+
+    def channels(self) -> List[int]:
+        return list(int(channel_name[-4:]) for channel_name in self.channel_names)
+    
+    def to_metadata(self) -> NeuropixelConfig:
+        pass

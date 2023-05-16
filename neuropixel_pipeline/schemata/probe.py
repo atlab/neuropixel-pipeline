@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datajoint as dj
 import numpy as np
-from ..metadata import NeuropixelConfig
+# from ..api.metadata import NeuropixelConfig
 
 schema = dj.schema("neuropixel_probe")
 
@@ -23,10 +23,7 @@ def run_populate():
 
 @schema
 class ProbeType(dj.Lookup):
-    """Type of probe.
-    Attributes:
-        probe_type ( varchar (32) ): Name of the probe type.
-    """
+    """Type of probe."""
 
     definition = """
     # Type of probe, with specific electrodes geometry defined
@@ -34,16 +31,7 @@ class ProbeType(dj.Lookup):
     """
 
     class Electrode(dj.Part):
-        """Electrode information for a given probe.
-        Attributes:
-            ProbeType (foreign key): ProbeType primary key.
-            electrode (foreign key, int): Electrode index, starting at 0.
-            shank (int): shank index, starting at 0.
-            shank_col (int): column index, starting at 0.
-            shank_row (int): row index, starting at 0.
-            x_coord (float): x-coordinate of the electrode within the probe in micrometers.
-            y_coord (float): y-coordinate of the electrode within the probe in micrometers.
-        """
+        """Electrode information for a given probe."""
 
         definition = """
         -> master
@@ -80,12 +68,7 @@ class ProbeType(dj.Lookup):
 
 @schema
 class Probe(dj.Lookup):
-    """Represent a physical probe with unique ID
-    Attributes:
-        probe ( varchar(32) ): Unique ID for this model of the probe.
-        ProbeType (dict): ProbeType entry.
-        probe_comment ( varchar(1000) ): Comment about this model of probe.
-    """
+    """Represent a physical probe with unique ID"""
 
     definition = """
     # Represent a physical probe with unique identification
@@ -98,12 +81,7 @@ class Probe(dj.Lookup):
 
 @schema
 class ElectrodeConfig(dj.Lookup):
-    """Electrode configuration setting on a probe.
-    Attributes:
-        electrode_config_hash (foreign key, uuid): unique index for electrode configuration.
-        ProbeType (dict): ProbeType entry.
-        electrode_config_name ( varchar(4000) ): User-friendly name for this electrode configuration.
-    """
+    """Electrode configuration setting on a probe."""
 
     definition = """
     # The electrode configuration setting on a given probe
@@ -114,11 +92,7 @@ class ElectrodeConfig(dj.Lookup):
     """
 
     class Electrode(dj.Part):
-        """Electrode included in the recording.
-        Attributes:
-            ElectrodeConfig (foreign key): ElectrodeConfig primary key.
-            ProbeType.Electrode (foreign key): ProbeType.Electrode primary key.
-        """
+        """Electrode included in the recording."""
 
         definition = """  # Electrodes selected for recording
         -> master

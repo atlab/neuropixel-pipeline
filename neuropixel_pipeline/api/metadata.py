@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, PositiveInt, constr, condecimal
-from typing import Optional, Self, List
+from pydantic import BaseModel, constr, condecimal, PositiveInt
+from pydantic.dataclasses import dataclass
+from typing import Optional, List
 from enum import Enum
 from datetime import datetime
 import numpy as np
 
 
-class NeuropixelConfig(
-    BaseModel
-):  # Add the docstrings from build_electrode_layouts method
+@dataclass
+class SessionModel:
+    session_id: PositiveInt
+
+
+class NeuropixelConfig(BaseModel):
     # probe type (e.g., "neuropixels 1.0 - 3A").
     probe_type: str
     # site count per shank.
@@ -71,7 +75,7 @@ class NeuropixelConfig(
         ]
 
     @classmethod
-    def configs(cls) -> List[Self]:
+    def configs(cls) -> List[NeuropixelConfig]:
         return [
             cls(
                 probe_type="neuropixels 1.0 - 3A",
@@ -126,12 +130,6 @@ class NeuropixelConfig(
         ]
 
 
-class PreClusteringData(BaseModel):
-    session_id: PositiveInt
-    probe: ProbeData
-    shank: ShankData = None  # will eventually have multiple shanks per probe
-
-
 class AcquisitionSoftware(BaseModel):
     acq_software: constr(max_length=24)
 
@@ -139,10 +137,6 @@ class AcquisitionSoftware(BaseModel):
 class ProbeData(BaseModel):
     # unique indentifier for this model of probe, serial number
     probe: constr(max_length=32)
-
-
-class ShankData(BaseModel):
-    pass
 
 
 class SkullReferenceValue(Enum, str):

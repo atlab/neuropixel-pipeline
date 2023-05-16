@@ -9,14 +9,11 @@ import datajoint as dj
 
 schema = dj.schema("neuropixel_base")
 
-
-def run_populate():
-    # temporary test value
-    Session.insert1((0,), skip_duplicates=True)
-
-
+# TODO: connect session with upstream
 @schema
 class Session(dj.Manual):
+    """Session key"""
+
     definition = """
     # Session: table connection
     session_id : int unsigned # Session primary key
@@ -25,6 +22,8 @@ class Session(dj.Manual):
 
 @schema
 class SkullReference(dj.Lookup):
+    """Reference area from the skull"""
+
     definition = """
     skull_reference   : varchar(60)
     """
