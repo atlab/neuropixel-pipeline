@@ -25,7 +25,7 @@ dj_utils.StoresConfig(stores).set_dj_config()
 #       names that point to the same internal adapter. So like adapters.lfp_mean and adapters.lfp might just be pointing to the same adapter, but have two different ways to get there.
 
 
-class Populate: # TODO: Add a discriminant (pydantic supports these) or enum for changing how Populate gets run
+class PopulateHelper: # TODO: Add a discriminant (pydantic supports these) or enum for changing how Populate gets run
     def run(data: dict):
         AcquisitionSoftware  # no populate necessary
 
@@ -310,7 +310,7 @@ class CuratedClustering(dj.Imported):
         definition = """
         # Properties of a given unit from a round of clustering (and curation)
         -> master
-        unit: int
+        unit_id: int
         ---
         -> probe.ElectrodeConfig.Electrode  # electrode with highest waveform amplitude for this unit
         -> ClusterQualityLabel
