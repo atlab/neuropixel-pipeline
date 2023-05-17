@@ -18,13 +18,14 @@ schema = dj.schema("neuropixel_ephys")
 # TODO: Define config stores (pydantic serialization is a better alternative to the adapter side of things though)
 # TODO: Also, decide whether the external blob is fine rather than file paths (or find an abstraction over filepaths & the data types we're interested in, basically everthing with longblob)
 #       Maybe just some identifier based on Class (Table) name + field name?
-stores = {
-    '': {}
-}
+stores = {"": {}}
 dj_utils.StoresConfig(stores).set_dj_config()
+# TODO: YOOOOOOOO, I should have the pydantic adapters either match (or at least have names that point to) their field names, like adapters.lfp_mean or adapters['lfp_mean']
+#       this would make it really easy to know how to fetch an filepath datatype! If two different fields have the same adapter internally, doesn't matter they can have separate
+#       names that point to the same internal adapter. So like adapters.lfp_mean and adapters.lfp might just be pointing to the same adapter, but have two different ways to get there.
 
 
-class Populate:
+class Populate: # TODO: Add a discriminant (pydantic supports these) or enum for changing how Populate gets run
     def run(data: dict):
         AcquisitionSoftware  # no populate necessary
 
