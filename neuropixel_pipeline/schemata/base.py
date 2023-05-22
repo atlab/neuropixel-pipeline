@@ -9,6 +9,9 @@ import datajoint as dj
 
 schema = dj.schema("neuropixel_base")
 
+class PopulateHelper:
+    def add_session():
+        pass
 
 # TODO: connect session with upstream
 @schema
@@ -17,7 +20,7 @@ class Session(dj.Manual):
 
     definition = """
     # Session: table connection
-    session_id : int unsigned # Session primary key
+    session_id : int unsigned # Session primary key hash
     """
 
 

@@ -12,8 +12,7 @@ from typing import Dict
 from pathlib import Path
 from abc import ABC, abstractmethod
 
-from neuropixel_pipeline.schemata.dj_utils import StoresConfig
-from neuropixel_pipeline.utils import TODO
+from neuropixel_pipeline.utils import TODO, StoresConfig
 
 # TODO: Need a utility class for file loading, because this will be common.
 
@@ -40,7 +39,7 @@ class LFPTimeStamps(FilepathAdapter):
 class Adapters(BaseModel):
     _stores: StoresConfig
 
-    loaders: Dict[FilepathAdapter]
+    loaders: Dict[str, FilepathAdapter]
 
     # move these to just instantiation for loaders
     lfp_time_stamps: FilepathAdapter

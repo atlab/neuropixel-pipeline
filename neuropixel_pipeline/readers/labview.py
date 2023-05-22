@@ -15,7 +15,7 @@ from ..api.metadata import NeuropixelConfig
 from .kilosort import Kilosort
 
 
-class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=True):
+class LabviewNeuropixelMeta(Kilosort, BaseModel, arbitrary_types_allowed=True):
     # probe serial number
     serial_number: constr(max_length=32) = Field(alias="SerialNum")
 
@@ -52,7 +52,7 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
     @classmethod
     def from_h5(
         cls, directory: Path, family: str = "NPElectrophysiology%d.h5"
-    ) -> LabviewNeuropixelMetadata:
+    ) -> LabviewNeuropixelMeta:
         """
         Uses an h5 family driver if necessary
         """
@@ -62,7 +62,7 @@ class LabviewNeuropixelMetadata(Kilosort, BaseModel, arbitrary_types_allowed=Tru
         return cls(**meta)
 
     @classmethod
-    def from_metafile(cls) -> LabviewNeuropixelMetadata:
+    def from_metafile(cls) -> LabviewNeuropixelMeta:
         """
         This will be implemented when the metadata from labview is separated from the h5.
         """

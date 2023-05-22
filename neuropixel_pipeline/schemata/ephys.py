@@ -9,17 +9,18 @@ from . import base
 from . import probe
 from ..api import metadata
 from . import dj_utils
+from ..readers import labview
 from pathlib import Path
 from typing import List
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel, PositiveInt, constr
 
 schema = dj.schema("neuropixel_ephys")
 
 # TODO: Define config stores (pydantic serialization is a better alternative to the adapter side of things though)
 # TODO: Also, decide whether the external blob is fine rather than file paths (or find an abstraction over filepaths & the data types we're interested in, basically everthing with longblob)
 #       Maybe just some identifier based on Class (Table) name + field name?
-stores = {"": {}}
-dj_utils.StoresConfig(stores).set_dj_config()
+# stores = {"": {}}
+# dj_utils.StoresConfig(stores).set_dj_config()
 # TODO: YOOOOOOOO, I should have the pydantic adapters either match (or at least have names that point to) their field names, like adapters.lfp_mean or adapters['lfp_mean']
 #       this would make it really easy to know how to fetch an filepath datatype! If two different fields have the same adapter internally, doesn't matter they can have separate
 #       names that point to the same internal adapter. So like adapters.lfp_mean and adapters.lfp might just be pointing to the same adapter, but have two different ways to get there.
@@ -51,9 +52,20 @@ class PopulateHelper: # TODO: Add a discriminant (pydantic supports these) or en
         )
 
 
-class PreClusteringData(BaseModel, from_attributes=True):
-    session_id: PositiveInt
-    probe: metadata.ProbeData
+    class InitialSetup(BaseModel, from_attributes=True):
+        acq_software: constr(max_length=24)
+
+    class PreClusteringData(BaseModel, from_attributes=True):
+        session_id: PositiveInt
+        probe: metadata.ProbeData
+
+    class ClusteringData(BaseModel, from_attributes=True):
+        pass
+
+    class QualityMetricsData(BaseModel, from_attributes=True):
+        pass
+
+    
 
 
 ### ----------------------------- Table declarations ----------------------
@@ -130,11 +142,11 @@ class EphysRecording(dj.Imported):
     @classmethod
     def read_metadatas(
         cls, directories: List[Path]
-    ) -> List[metadata.LabviewNeuropixelMetadata]:
+    ) -> List[labview.LabviewNeuropixelMeta]:
         labview_metadatas = []
         for session_dir in directories:
             labview_metadatas.append(
-                metadata.LabviewNeuropixelMetadata.from_h5(session_dir)
+                labview.LabviewNeuropixelMeta.from_h5(session_dir)
             )
         return labview_metadatas
 
