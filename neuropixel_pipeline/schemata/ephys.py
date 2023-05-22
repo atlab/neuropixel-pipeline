@@ -33,7 +33,6 @@ class PopulateHelper: # TODO: Add a discriminant (pydantic supports these) or en
         probe_insertion = dict(
             session_id=0,
             insertion_number=0,
-            shank_number=None,  # needs to be added as a key?
             probe=None,
         )
         ProbeInsertion.insert1(probe_insertion)

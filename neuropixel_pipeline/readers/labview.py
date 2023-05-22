@@ -4,7 +4,6 @@ Custom labview neuropixel aquisition format reader
 
 from __future__ import annotations
 
-import h5py
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, constr
 from typing import List
@@ -56,6 +55,7 @@ class LabviewNeuropixelMeta(Kilosort, BaseModel, arbitrary_types_allowed=True):
         """
         Uses an h5 family driver if necessary
         """
+        import h5py
         with h5py.File(directory / family, driver="family", memb_size=0) as f:
             meta = dict(f.attrs)
 

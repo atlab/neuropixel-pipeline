@@ -37,7 +37,7 @@ class LFPTimeStamps(FilepathAdapter):
         TODO()
 
 class Adapters(BaseModel):
-    _stores: StoresConfig
+    # _stores: StoresConfig
 
     loaders: Dict[str, FilepathAdapter]
 
