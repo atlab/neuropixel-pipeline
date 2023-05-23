@@ -13,6 +13,8 @@ from ..readers import labview
 from pathlib import Path
 from typing import List
 from pydantic import BaseModel, PositiveInt, constr
+from pydantic.dataclasses import dataclass
+
 
 schema = dj.schema("neuropixel_ephys")
 
