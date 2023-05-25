@@ -42,3 +42,17 @@ class StoresConfig(BaseModel):
             dj.config["stores"] = stores_config
         else:
             dj.config["stores"].update(stores_config)
+
+# from datajoint element-interface utils
+def dict_to_uuid(key: dict):
+    """Given a dictionary `key`, returns a hash string as UUID
+
+    Args:
+        key (dict): Any python dictionary"""
+    import hashlib
+    import uuid
+    hashed = hashlib.md5()
+    for k, v in sorted(key.items()):
+        hashed.update(str(k).encode())
+        hashed.update(str(v).encode())
+    return uuid.UUID(hex=hashed.hexdigest())

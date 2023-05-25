@@ -49,7 +49,7 @@ class NeuropixelConfig(BaseModel):
             np.arange(row_count) * (self.row_spacing or 1), self.col_count_per_shank
         )
 
-        if self.white_spacing is not None:
+        if self.white_spacing:
             x_white_spaces = np.tile(
                 [self.white_spacing, self.white_spacing, 0, 0], int(row_count / 2)
             )

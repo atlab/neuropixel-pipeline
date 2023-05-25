@@ -5,15 +5,20 @@ import gc
 from decimal import Decimal
 
 import datajoint as dj
-from . import base
+import numpy as np
+import datetime
+
+from neuropixel_pipeline.api.clustering import ClusteringTaskRunner
 from . import probe
 from ..api import metadata
-from . import dj_utils
-from ..readers import labview
+from .. import utils
+from ..readers import labview, kilosort
 from pathlib import Path
 from typing import List
-from pydantic import BaseModel, PositiveInt, constr
+from pydantic import BaseModel, PositiveInt, constr, validate_call
 from pydantic.dataclasses import dataclass
+
+from neuropixel_pipeline import readers
 
 
 schema = dj.schema("neuropixel_ephys")
@@ -76,6 +81,35 @@ class PopulateHelper: # TODO: Add a discriminant (pydantic supports these) or en
 
 
 @schema
+class Session(dj.Manual):
+    """Session key"""
+
+    definition = """
+    # Session: table connection
+    session_id : int auto_increment # Session primary key hash
+    ---
+    animal_id=null: int unsigned # animal id
+    session=null: smallint unsigned # original session id
+    scan_idx=null: smallint unsigned # scan idx
+    """
+
+    @classmethod
+    def add_session(cls, session_meta, skip_duplicates=True):
+        if not cls & session_meta:
+            cls.insert1(session_meta)
+
+
+@schema
+class SkullReference(dj.Lookup):
+    """Reference area from the skull"""
+
+    definition = """
+    skull_reference   : varchar(60)
+    """
+    contents = zip(["Bregma", "Lambda"])
+
+
+@schema
 class AcquisitionSoftware(dj.Lookup):
     """Name of software used for recording electrophysiological data."""
 
@@ -91,7 +125,7 @@ class ProbeInsertion(dj.Manual):
 
     definition = """
     # Probe insertion implanted into an animal for a given session.
-    -> base.Session
+    -> Session
     insertion_number: tinyint unsigned
     ---
     -> probe.Probe
@@ -106,7 +140,7 @@ class InsertionLocation(dj.Manual):
     # Brain Location of a given probe insertion.
     -> ProbeInsertion
     ---
-    -> base.SkullReference
+    -> SkullReference
     ap_location: decimal(6, 2) # (um) anterior-posterior; ref is 0; more anterior is more positive
     ml_location: decimal(6, 2) # (um) medial axis; ref is 0 ; more right is more positive
     depth:       decimal(6, 2) # (um) manipulator depth relative to surface of the brain (0); more ventral is more negative
@@ -117,51 +151,73 @@ class InsertionLocation(dj.Manual):
 
 
 @schema
+class EphysFile(dj.Manual):
+    """File directory for ephys sessions"""
+
+    definition = """
+    # File directories for ephys sessions
+    file_path: varchar(255) # file path or directory for an ephys session
+    ---
+    -> AcquisitionSoftware
+    """
+
+
+@schema
 class EphysRecording(dj.Imported):
     """Automated table with electrophysiology recording information for each probe inserted during an experimental session."""
 
     definition = """
     # Ephys recording from a probe insertion for a given session.
     -> ProbeInsertion
+    -> EphysFile
     ---
     -> probe.ElectrodeConfig
-    -> AcquisitionSoftware
     sampling_rate: float # (Hz)
-    recording_datetime: datetime # datetime of the recording from this probe
-    recording_duration: float # (seconds) duration of the recording from this probe
+    recording_datetime=null: datetime # datetime of the recording from this probe
+    recording_duration=null: float # (seconds) duration of the recording from this probe
     """
-
-    class EphysFile(dj.Part):
-        """Paths of electrophysiology recording files for each insertion."""
-
-        definition = """
-        # Paths of files of a given EphysRecording round.
-        -> master
-        file_path: varchar(255)  # filepath relative to root data directory
-        """
-
-    @classmethod
-    def read_metadatas(
-        cls, directories: List[Path]
-    ) -> List[labview.LabviewNeuropixelMeta]:
-        labview_metadatas = []
-        for session_dir in directories:
-            labview_metadatas.append(
-                labview.LabviewNeuropixelMeta.from_h5(session_dir)
-            )
-        return labview_metadatas
-
-    @classmethod
-    def fill(cls, probe_insertion, directories: List[Path]):
-        record = dict(
-            **probe_insertion,
-        )
 
     def make(self, key):
         """Populates table with electrophysiology recording information."""
-        raise NotImplementedError(
-            "currently the way to get session filepaths is too flexible"
+        session_dir = Path(key['file_path'])
+        acq_software = (EphysFile & key).fetch1('acq_software')
+
+        inserted_probe_serial_number = (ProbeInsertion * probe.Probe & key).fetch1(
+            "probe"
         )
+
+        # search session dir and determine acquisition software
+
+        # supported_probe_types = probe.ProbeType.fetch("probe_type")
+
+        if acq_software == "LabviewV1":
+            labview_meta = labview.LabviewNeuropixelMeta.from_h5(session_dir)
+            if not str(labview_meta.serial_number) == inserted_probe_serial_number:
+                raise FileNotFoundError(
+                    "No Labview data found for probe insertion: {}".format(key)
+                )
+
+            probe_type = (probe.Probe & dict(probe=labview_meta.serial_number)).fetch1("probe_type")
+            
+            electrode_config_hash_key = probe.ElectrodeConfig.add_new_config(labview_meta, probe_type=probe_type)
+
+            self.insert1(
+                {
+                    **key,
+                    **electrode_config_hash_key,
+                    "acq_software": acq_software,
+                    "sampling_rate": labview_meta.sampling_rate,
+                    "recording_datetime": None,
+                    "recording_duration": None,
+                }, ignore_extra_fields=True
+            )
+        else:
+            raise NotImplementedError(
+                f"Processing ephys files from"
+                f" acquisition software of type {acq_software} is"
+                f" not yet implemented"
+            )
+
 
 
 @schema
@@ -188,6 +244,7 @@ class LFP(dj.Imported):
         """
 
     def make(self, key):
+        # based on acq_software switch to 
         pass
 
 
@@ -219,14 +276,24 @@ class ClusteringParamSet(dj.Lookup):
 
     definition = """
     # Parameter set to be used in a clustering procedure
-    paramset_idx:  smallint
+    paramset_idx:  smallint auto_increment
     ---
     -> ClusteringMethod
     paramset_desc: varchar(128)
-    param_set_hash: uuid
-    unique index (param_set_hash)
+    paramset_hash: uuid
+    unique index (paramset_hash)
     params: longblob  # dictionary of all applicable parameters
     """
+
+    @classmethod
+    def fill(cls, params:dict, clustering_method:str, description:str="", skip_duplicates=False):
+        params_uuid = utils.dict_to_uuid(params)
+        cls.insert1(dict(
+            clustering_method=clustering_method,
+            paramset_desc=description,
+            paramset_hash=params_uuid,
+            params=params,
+        ), skip_duplicates=skip_duplicates)
 
 
 # TODO: Will revisit the necessity of this, or put as a separate table
@@ -273,6 +340,17 @@ class Clustering(dj.Imported):
     clustering_time: datetime  # time of generation of this set of clustering results
     package_version='': varchar(16)
     """
+
+    def make(self, key):
+        source_key = (ClusteringTask & key).fetch1()
+        task_runner = ClusteringTaskRunner(**source_key)
+        time_finish = task_runner.trigger_clustering() # .load_time_finished()
+        current_time = datetime.datetime.now() # FIXME: this should be time of the clustering, which isn't always triggered
+
+        self.insert1(dict(
+            **source_key,
+            clustering_time=current_time,
+        ), ignore_extra_fields=True)
 
 
 # Probably more layers above this are useful (for multiple users per curation, auto-curation maybe, etc.)
@@ -332,7 +410,81 @@ class CuratedClustering(dj.Imported):
         spike_sites : longblob   # array of electrode associated with each spike
         spike_depths=null : longblob  # (um) array of depths associated with each spike, relative to the (0, 0) of the probe
         """
+    
+    def make(self, key):
+        """Automated population of Unit information."""
+        
+        kilosort_path = (ClusteringTask & key).fetch1('clustering_output_dir')
+        # kilosort_path = (Curation & key).fetch1('curation_output_dir')
+        kilosort_dataset = kilosort.Kilosort(kilosort_path)
+        sample_rate = (EphysRecording & key).fetch1("sampling_rate")
 
+        sample_rate = kilosort_dataset.data["params"].get("sample_rate", sample_rate)
+
+        # ---------- Unit ----------
+        # -- Remove 0-spike units
+        withspike_idx = [
+            i
+            for i, u in enumerate(kilosort_dataset.data["cluster_ids"])
+            if (kilosort_dataset.data["spike_clusters"] == u).any()
+        ]
+        valid_units = kilosort_dataset.data["cluster_ids"][withspike_idx]
+        valid_unit_labels = kilosort_dataset.data["cluster_groups"][withspike_idx]
+
+        # -- Spike-times --
+        # spike_times_sec_adj > spike_times_sec > spike_times
+        spike_time_key = (
+            "spike_times_sec_adj"
+            if "spike_times_sec_adj" in kilosort_dataset.data
+            else "spike_times_sec"
+            if "spike_times_sec" in kilosort_dataset.data
+            else "spike_times"
+        )
+        spike_times = kilosort_dataset.data[spike_time_key]
+        kilosort_dataset.extract_spike_depths()
+
+        # -- Spike-sites and Spike-depths --
+        spike_sites = kilosort_dataset.data["spike_sites"]
+        spike_depths = kilosort_dataset.data["spike_depths"]
+
+        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key['file_path'])
+        electrode_config_hash = labview_metadata.electrode_config_hash()
+
+        probe_type = (probe.Probe & dict(serial_number=labview_metadata.serial_number)).fetch1('probe_type')
+
+        # -- Insert unit, label, peak-chn
+        units = []
+        for unit, unit_lbl in zip(valid_units, valid_unit_labels):
+            if (kilosort_dataset.data["spike_clusters"] == unit).any():
+                unit_channel, _ = kilosort_dataset.get_best_channel(unit)
+                unit_spike_times = (
+                    spike_times[kilosort_dataset.data["spike_clusters"] == unit]
+                    / sample_rate
+                )
+                spike_count = len(unit_spike_times)
+
+                units.append(
+                    {
+                        "unit_id": unit,
+                        "cluster_quality_label": unit_lbl,
+                        "electrode_config_hash": electrode_config_hash,
+                        "probe_type": probe_type,
+                        "electrode": unit_channel,
+                        "spike_times": unit_spike_times,
+                        "spike_count": spike_count,
+                        "spike_sites": spike_sites[
+                            kilosort_dataset.data["spike_clusters"] == unit
+                        ],
+                        "spike_depths": spike_depths[
+                            kilosort_dataset.data["spike_clusters"] == unit
+                        ]
+                        if spike_depths is not None
+                        else None,
+                    }
+                )
+
+        self.insert1(key)
+        self.Unit.insert([{**key, **u} for u in units])
 
 @schema
 class WaveformSet(dj.Imported):
@@ -367,6 +519,117 @@ class WaveformSet(dj.Imported):
         waveforms=null: longblob  # (uV) (spike x sample) waveforms of a sampling of spikes at the given electrode for the given unit
         """
 
+    def make(self, key):
+        """Populates waveform tables."""
+        output_dir = (Curation & key).fetch1("curation_output_dir")
+        kilosort_dir = find_full_path(get_ephys_root_data_dir(), output_dir)
+
+        kilosort_dataset = kilosort.Kilosort(kilosort_dir)
+
+        acq_software, probe_serial_number = (
+            EphysRecording * ProbeInsertion & key
+        ).fetch1("acq_software", "probe")
+
+        # -- Get channel and electrode-site mapping
+        recording_key = (EphysRecording & key).fetch1("KEY")
+        channel2electrodes = get_neuropixels_channel2electrode_map(
+            recording_key, acq_software
+        )
+
+        is_qc = (Curation & key).fetch1("quality_control")
+
+        # Get all units
+        units = {
+            u["unit"]: u
+            for u in (CuratedClustering.Unit & key).fetch(as_dict=True, order_by="unit")
+        }
+
+        if is_qc:
+            unit_waveforms = np.load(
+                kilosort_dir / "mean_waveforms.npy"
+            )  # unit x channel x sample
+
+            def yield_unit_waveforms():
+                for unit_no, unit_waveform in zip(
+                    kilosort_dataset.data["cluster_ids"], unit_waveforms
+                ):
+                    unit_peak_waveform = {}
+                    unit_electrode_waveforms = []
+                    if unit_no in units:
+                        for channel, channel_waveform in zip(
+                            kilosort_dataset.data["channel_map"], unit_waveform
+                        ):
+                            unit_electrode_waveforms.append(
+                                {
+                                    **units[unit_no],
+                                    **channel2electrodes[channel],
+                                    "waveform_mean": channel_waveform,
+                                }
+                            )
+                            if (
+                                channel2electrodes[channel]["electrode"]
+                                == units[unit_no]["electrode"]
+                            ):
+                                unit_peak_waveform = {
+                                    **units[unit_no],
+                                    "peak_electrode_waveform": channel_waveform,
+                                }
+                    yield unit_peak_waveform, unit_electrode_waveforms
+
+        else:
+            if acq_software == "SpikeGLX":
+                spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
+                neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
+            elif acq_software == "Open Ephys":
+                session_dir = find_full_path(
+                    get_ephys_root_data_dir(), get_session_directory(key)
+                )
+                openephys_dataset = openephys.OpenEphys(session_dir)
+                neuropixels_recording = openephys_dataset.probes[probe_serial_number]
+
+            def yield_unit_waveforms():
+                for unit_dict in units.values():
+                    unit_peak_waveform = {}
+                    unit_electrode_waveforms = []
+
+                    spikes = unit_dict["spike_times"]
+                    waveforms = neuropixels_recording.extract_spike_waveforms(
+                        spikes, kilosort_dataset.data["channel_map"]
+                    )  # (sample x channel x spike)
+                    waveforms = waveforms.transpose(
+                        (1, 2, 0)
+                    )  # (channel x spike x sample)
+                    for channel, channel_waveform in zip(
+                        kilosort_dataset.data["channel_map"], waveforms
+                    ):
+                        unit_electrode_waveforms.append(
+                            {
+                                **unit_dict,
+                                **channel2electrodes[channel],
+                                "waveform_mean": channel_waveform.mean(axis=0),
+                                "waveforms": channel_waveform,
+                            }
+                        )
+                        if (
+                            channel2electrodes[channel]["electrode"]
+                            == unit_dict["electrode"]
+                        ):
+                            unit_peak_waveform = {
+                                **unit_dict,
+                                "peak_electrode_waveform": channel_waveform.mean(
+                                    axis=0
+                                ),
+                            }
+
+                    yield unit_peak_waveform, unit_electrode_waveforms
+
+        # insert waveform on a per-unit basis to mitigate potential memory issue
+        self.insert1(key)
+        for unit_peak_waveform, unit_electrode_waveforms in yield_unit_waveforms():
+            if unit_peak_waveform:
+                self.PeakWaveform.insert1(unit_peak_waveform, ignore_extra_fields=True)
+            if unit_electrode_waveforms:
+                self.Waveform.insert(unit_electrode_waveforms, ignore_extra_fields=True)
 
 # important to note the original source of these quality metrics:
 #   https://allensdk.readthedocs.io/en/latest/
@@ -424,3 +687,33 @@ class QualityMetrics(dj.Imported):
         velocity_above=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the top of the probe
         velocity_below=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the bottom of the probe
         """
+    
+    def make(self, key):
+        """Populates tables with quality metrics data."""
+        import pandas as pd
+
+        kilosort_dir = (ClusteringTask & key).fetch1("file_path")
+
+        metric_fp = kilosort_dir / "metrics.csv"
+        rename_dict = {
+            "isi_viol": "isi_violation",
+            "num_viol": "number_violation",
+            "contam_rate": "contamination_rate",
+        }
+
+        if not metric_fp.exists():
+            raise FileNotFoundError(f"QC metrics file not found: {metric_fp}")
+
+        metrics_df = pd.read_csv(metric_fp)
+        metrics_df.set_index("cluster_id", inplace=True)
+        metrics_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        metrics_df.columns = metrics_df.columns.str.lower()
+        metrics_df.rename(columns=rename_dict, inplace=True)
+        metrics_list = [
+            dict(metrics_df.loc[unit_key["unit"]], **unit_key)
+            for unit_key in (CuratedClustering.Unit & key).fetch("KEY")
+        ]
+
+        self.insert1(key)
+        self.Cluster.insert(metrics_list, ignore_extra_fields=True)
+        self.Waveform.insert(metrics_list, ignore_extra_fields=True)

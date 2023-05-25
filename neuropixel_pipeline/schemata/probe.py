@@ -9,7 +9,9 @@ from __future__ import annotations
 import datajoint as dj
 import numpy as np
 
-# from ..api.metadata import NeuropixelConfig
+from neuropixel_pipeline.readers import labview
+
+from ..api.metadata import NeuropixelConfig
 
 schema = dj.schema("neuropixel_probe")
 
@@ -41,12 +43,12 @@ class ProbeType(dj.Lookup):
         shank: int           # shank index, starts at 0, advance left to right
         shank_col: int       # column index, starts at 0, advance left to right
         shank_row: int       # row index, starts at 0.
-        x_coord=NULL: float  # (um) x coordinate of the electrode within the probe.
-        y_coord=NULL: float  # (um) y coordinate of the electrode within the probe.
+        x_coord: float  # (um) x coordinate of the electrode within the probe.
+        y_coord: float  # (um) y coordinate of the electrode within the probe.
         """
 
-    @staticmethod
-    def fill_neuropixel_probes():
+    @classmethod
+    def fill_neuropixel_probes(cls):
         """
         Create `ProbeType` and `Electrode` for neuropixels probes:
         + neuropixels 1.0 - 3A
@@ -60,11 +62,11 @@ class ProbeType(dj.Lookup):
         """
 
         for probe_config in NeuropixelConfig.configs():
-            electrode_layouts = probe_config.build_electrode_layouts()
+            electrode_layouts = probe_config.build_electrode_layout()
 
-            with ProbeType.connection.transaction:
-                ProbeType.insert1((probe_config.probe_type,), skip_duplicates=True)
-                ProbeType.Electrode.insert(electrode_layouts, skip_duplicates=True)
+            with cls.connection.transaction:
+                cls.insert1((probe_config.probe_type,), skip_duplicates=True)
+                cls.Electrode.insert(electrode_layouts, skip_duplicates=True)
 
 
 @schema
@@ -99,3 +101,32 @@ class ElectrodeConfig(dj.Lookup):
         -> master
         -> ProbeType.Electrode
         """
+
+    @classmethod
+    def add_new_config(cls, metadata:labview.LabviewNeuropixelMeta, probe_type:str, electrode_config_name:str=''):
+        metadata = labview.LabviewNeuropixelMeta.model_validate(metadata)
+        electrode_config_key = {'electrode_config_hash': metadata.electrode_config_hash()}
+        electrode_config_key["probe_type"] = probe_type
+        
+        # ---- make new ElectrodeConfig if needed ----
+        if not ElectrodeConfig & electrode_config_key:
+            ElectrodeConfig.insert1(
+                {
+                    **electrode_config_key,
+                    "electrode_config_name": electrode_config_name
+                }
+            )
+
+            probe_rel = Probe & dict(probe=metadata.serial_number)
+            probe_type = probe_rel.fetch1('probe_type')
+
+            probe_shank_rel = ProbeType.Electrode & dict(probe_type=probe_type)
+            electrode_rel = probe_shank_rel & [{'electrode': channel} for channel in metadata.channels()]
+
+            ElectrodeConfig.Electrode.insert(
+                ({**electrode_config_key, **electrode} for electrode in electrode_rel),
+                ignore_extra_fields=True
+            )
+
+        return electrode_config_key
+

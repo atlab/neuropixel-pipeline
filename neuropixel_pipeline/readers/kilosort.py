@@ -16,13 +16,9 @@ class Kilosort:
         "amplitudes.npy",
         "channel_map.npy",
         "channel_positions.npy",
-        "pc_features.npy",
-        "pc_feature_ind.npy",
         "similar_templates.npy",
         "spike_templates.npy",
         "spike_times.npy",
-        "template_features.npy",
-        "template_feature_ind.npy",
         "templates.npy",
         "templates_ind.npy",
         "whitening_mat.npy",
@@ -35,6 +31,11 @@ class Kilosort:
         "spike_times_sec_adj.npy",
         "cluster_groups.csv",
         "cluster_KSLabel.tsv",
+        # These were removed from the core files for kilosort4
+        "pc_features.npy",
+        "pc_feature_ind.npy",
+        "template_features.npy",
+        "template_feature_ind.npy",
     ]
 
     kilosort_files = _kilosort_core_files + _kilosort_additional_files
@@ -47,7 +48,7 @@ class Kilosort:
 
         self.validate()
 
-        params_filepath = kilosort_dir / "params.py"
+        params_filepath = self._kilosort_dir / "params.py"
         self._info = {
             "time_created": datetime.fromtimestamp(params_filepath.stat().st_ctime),
             "time_modified": datetime.fromtimestamp(params_filepath.stat().st_mtime),
@@ -78,9 +79,9 @@ class Kilosort:
             )
 
     def _load(self):
-        # temporary and legacy code,
-        # it's only used when parsing params.py
         def convert_to_number_maybe(value: str):
+            # ^ temporary and legacy code,
+            # it's only used when parsing params.py
             if isinstance(value, str):
                 try:
                     value = int(value)
@@ -127,8 +128,9 @@ class Kilosort:
         self._data["channel_map"] = self._data["channel_map"].flatten()
 
         # Read the Cluster Groups
+        # yes, both cluster_col_name's currently are KSLabel
         for cluster_pattern, cluster_col_name in zip(
-            ["cluster_group.*", "cluster_KSLabel.*"], ["group", "KSLabel"]
+            ["cluster_group.*", "cluster_KSLabel.*"], ["KSLabel", "KSLabel"]
         ):
             try:
                 cluster_file = next(self._kilosort_dir.glob(cluster_pattern))
