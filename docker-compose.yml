@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  notebook:
+    image: jupyter/minimal-notebook:python-3.8
+    env_file: .env
+    volumes:
+      - .:/src
+      - /mnt:/mnt
+    entrypoint: ["/bin/bash"]
+    command: ["-c",
+      "cd /src &&\
+      pip3 install . &&\
+      cd notebooks &&\
+      jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=''"]
+    ports:
+      - ${NOTEBOOK_PORT:-8888}:8888
