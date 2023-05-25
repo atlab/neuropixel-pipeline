@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pydantic import BaseModel
@@ -14,6 +13,7 @@ class TODO:
         if msg is not None:
             error_msg = f'{error_msg}: "{msg}"'
         raise NotImplementedError(error_msg)
+
 
 class DatajointStoreProtocol(str, Enum):
     FILE = "file"
@@ -43,6 +43,7 @@ class StoresConfig(BaseModel):
         else:
             dj.config["stores"].update(stores_config)
 
+
 # from datajoint element-interface utils
 def dict_to_uuid(key: dict):
     """Given a dictionary `key`, returns a hash string as UUID
@@ -51,6 +52,7 @@ def dict_to_uuid(key: dict):
         key (dict): Any python dictionary"""
     import hashlib
     import uuid
+
     hashed = hashlib.md5()
     for k, v in sorted(key.items()):
         hashed.update(str(k).encode())

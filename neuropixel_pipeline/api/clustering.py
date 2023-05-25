@@ -1,22 +1,20 @@
+from __future__ import annotations
+
 from pydantic import BaseModel
-from enum import Enum
+from datetime import datetime
 from pathlib import Path
+from enum import Enum
+
 
 class ClusteringTaskMode(str, Enum):
-    LOAD = 'load'
-    TRIGGER = 'trigger'
+    LOAD = "load"
+    TRIGGER = "trigger"
 
-class ClusteringTaskRunner(BaseModel):
-    file_path: Path
-    clustering_output_dir: Path
-    task_mode: ClusteringTaskMode
 
-    def load_time_finished(self):
-        if self.task_mode is ClusteringTaskMode.TRIGGER:
-            self.trigger_clustering()
-        # then load results
-        pass
-
-    def trigger_clustering(self):
-        # Using docker or kubernetes
-        pass
+class CurationInput(BaseModel):
+    curation_id: int
+    curation_time: datetime = datetime.now()
+    curation_output_dir: Path = None
+    quality_control: bool = False
+    curation: str = "no curation"
+    curation_note: str = ""

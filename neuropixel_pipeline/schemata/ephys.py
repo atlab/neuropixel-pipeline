@@ -1,77 +1,17 @@
 # flake8: noqa
 
-import gc
-
-from decimal import Decimal
-
 import datajoint as dj
 import numpy as np
 import datetime
 
-from neuropixel_pipeline.api.clustering import ClusteringTaskRunner
+from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
 from . import probe
-from ..api import metadata
 from .. import utils
 from ..readers import labview, kilosort
 from pathlib import Path
-from typing import List
-from pydantic import BaseModel, PositiveInt, constr, validate_call
-from pydantic.dataclasses import dataclass
-
-from neuropixel_pipeline import readers
 
 
 schema = dj.schema("neuropixel_ephys")
-
-# TODO: Define config stores (pydantic serialization is a better alternative to the adapter side of things though)
-# TODO: Also, decide whether the external blob is fine rather than file paths (or find an abstraction over filepaths & the data types we're interested in, basically everthing with longblob)
-#       Maybe just some identifier based on Class (Table) name + field name?
-# stores = {"": {}}
-# dj_utils.StoresConfig(stores).set_dj_config()
-# TODO: YOOOOOOOO, I should have the pydantic adapters either match (or at least have names that point to) their field names, like adapters.lfp_mean or adapters['lfp_mean']
-#       this would make it really easy to know how to fetch an filepath datatype! If two different fields have the same adapter internally, doesn't matter they can have separate
-#       names that point to the same internal adapter. So like adapters.lfp_mean and adapters.lfp might just be pointing to the same adapter, but have two different ways to get there.
-
-
-class PopulateHelper: # TODO: Add a discriminant (pydantic supports these) or enum for changing how Populate gets run
-    def run(data: dict):
-        AcquisitionSoftware  # no populate necessary
-
-        probe_insertion = dict(
-            session_id=0,
-            insertion_number=0,
-            probe=None,
-        )
-        ProbeInsertion.insert1(probe_insertion)
-
-        InsertionLocation.insert1(
-            dict(
-                **probe_insertion,
-                skull_reference="Bregma",  # will it always be Bregma?
-                ap_location=None,  # from kilosort metadata
-                ml_location=None,  # from kilosort metadata
-                depth=None,  # from kilosort metadata
-                theta=None,  # nullable?
-                phi=None,  # nullable?
-                beta=None,  # nullable?
-            )
-        )
-
-
-    class InitialSetup(BaseModel, from_attributes=True):
-        acq_software: constr(max_length=24)
-
-    class PreClusteringData(BaseModel, from_attributes=True):
-        session_id: PositiveInt
-        probe: metadata.ProbeData
-
-    class ClusteringData(BaseModel, from_attributes=True):
-        pass
-
-    class QualityMetricsData(BaseModel, from_attributes=True):
-        pass
-
-    
 
 
 ### ----------------------------- Table declarations ----------------------
@@ -96,7 +36,11 @@ class Session(dj.Manual):
     @classmethod
     def add_session(cls, session_meta, skip_duplicates=True):
         if not cls & session_meta:
-            cls.insert1(session_meta)
+            cls.insert1(session_meta, skip_duplicates=skip_duplicates)
+
+    @classmethod
+    def get_session_id(cls, session_meta):
+        return cls & session_meta
 
 
 @schema
@@ -179,8 +123,8 @@ class EphysRecording(dj.Imported):
 
     def make(self, key):
         """Populates table with electrophysiology recording information."""
-        session_dir = Path(key['file_path'])
-        acq_software = (EphysFile & key).fetch1('acq_software')
+        session_dir = Path(key["file_path"])
+        acq_software = (EphysFile & key).fetch1("acq_software")
 
         inserted_probe_serial_number = (ProbeInsertion * probe.Probe & key).fetch1(
             "probe"
@@ -197,9 +141,13 @@ class EphysRecording(dj.Imported):
                     "No Labview data found for probe insertion: {}".format(key)
                 )
 
-            probe_type = (probe.Probe & dict(probe=labview_meta.serial_number)).fetch1("probe_type")
-            
-            electrode_config_hash_key = probe.ElectrodeConfig.add_new_config(labview_meta, probe_type=probe_type)
+            probe_type = (probe.Probe & dict(probe=labview_meta.serial_number)).fetch1(
+                "probe_type"
+            )
+
+            electrode_config_hash_key = probe.ElectrodeConfig.add_new_config(
+                labview_meta, probe_type=probe_type
+            )
 
             self.insert1(
                 {
@@ -209,7 +157,8 @@ class EphysRecording(dj.Imported):
                     "sampling_rate": labview_meta.sampling_rate,
                     "recording_datetime": None,
                     "recording_duration": None,
-                }, ignore_extra_fields=True
+                },
+                ignore_extra_fields=True,
             )
         else:
             raise NotImplementedError(
@@ -217,7 +166,6 @@ class EphysRecording(dj.Imported):
                 f" acquisition software of type {acq_software} is"
                 f" not yet implemented"
             )
-
 
 
 @schema
@@ -244,7 +192,7 @@ class LFP(dj.Imported):
         """
 
     def make(self, key):
-        # based on acq_software switch to 
+        # based on acq_software switch to
         pass
 
 
@@ -286,14 +234,23 @@ class ClusteringParamSet(dj.Lookup):
     """
 
     @classmethod
-    def fill(cls, params:dict, clustering_method:str, description:str="", skip_duplicates=False):
+    def fill(
+        cls,
+        params: dict,
+        clustering_method: str,
+        description: str = "",
+        skip_duplicates=False,
+    ):
         params_uuid = utils.dict_to_uuid(params)
-        cls.insert1(dict(
-            clustering_method=clustering_method,
-            paramset_desc=description,
-            paramset_hash=params_uuid,
-            params=params,
-        ), skip_duplicates=skip_duplicates)
+        cls.insert1(
+            dict(
+                clustering_method=clustering_method,
+                paramset_desc=description,
+                paramset_hash=params_uuid,
+                params=params,
+            ),
+            skip_duplicates=skip_duplicates,
+        )
 
 
 # TODO: Will revisit the necessity of this, or put as a separate table
@@ -344,13 +301,18 @@ class Clustering(dj.Imported):
     def make(self, key):
         source_key = (ClusteringTask & key).fetch1()
         task_runner = ClusteringTaskRunner(**source_key)
-        time_finish = task_runner.trigger_clustering() # .load_time_finished()
-        current_time = datetime.datetime.now() # FIXME: this should be time of the clustering, which isn't always triggered
+        time_finish = task_runner.trigger_clustering()  # .load_time_finished()
+        current_time = (
+            datetime.datetime.now()
+        )  # FIXME: this should be time of the clustering, which isn't always triggered
 
-        self.insert1(dict(
-            **source_key,
-            clustering_time=current_time,
-        ), ignore_extra_fields=True)
+        self.insert1(
+            dict(
+                **source_key,
+                clustering_time=current_time,
+            ),
+            ignore_extra_fields=True,
+        )
 
 
 # Probably more layers above this are useful (for multiple users per curation, auto-curation maybe, etc.)
@@ -410,11 +372,11 @@ class CuratedClustering(dj.Imported):
         spike_sites : longblob   # array of electrode associated with each spike
         spike_depths=null : longblob  # (um) array of depths associated with each spike, relative to the (0, 0) of the probe
         """
-    
+
     def make(self, key):
         """Automated population of Unit information."""
-        
-        kilosort_path = (ClusteringTask & key).fetch1('clustering_output_dir')
+
+        kilosort_path = (ClusteringTask & key).fetch1("clustering_output_dir")
         # kilosort_path = (Curation & key).fetch1('curation_output_dir')
         kilosort_dataset = kilosort.Kilosort(kilosort_path)
         sample_rate = (EphysRecording & key).fetch1("sampling_rate")
@@ -447,10 +409,12 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key['file_path'])
+        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key["file_path"])
         electrode_config_hash = labview_metadata.electrode_config_hash()
 
-        probe_type = (probe.Probe & dict(serial_number=labview_metadata.serial_number)).fetch1('probe_type')
+        probe_type = (
+            probe.Probe & dict(serial_number=labview_metadata.serial_number)
+        ).fetch1("probe_type")
 
         # -- Insert unit, label, peak-chn
         units = []
@@ -484,7 +448,9 @@ class CuratedClustering(dj.Imported):
                 )
 
         self.insert1(key)
-        self.Unit.insert([{**key, **u} for u in units])
+        insert_units = [{**key, **u} for u in units]
+        self.Unit.insert(insert_units)
+
 
 @schema
 class WaveformSet(dj.Imported):
@@ -631,6 +597,7 @@ class WaveformSet(dj.Imported):
             if unit_electrode_waveforms:
                 self.Waveform.insert(unit_electrode_waveforms, ignore_extra_fields=True)
 
+
 # important to note the original source of these quality metrics:
 #   https://allensdk.readthedocs.io/en/latest/
 #   https://github.com/AllenInstitute/ecephys_spike_sorting
@@ -687,12 +654,15 @@ class QualityMetrics(dj.Imported):
         velocity_above=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the top of the probe
         velocity_below=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the bottom of the probe
         """
-    
+
     def make(self, key):
         """Populates tables with quality metrics data."""
         import pandas as pd
 
-        kilosort_dir = (ClusteringTask & key).fetch1("file_path")
+        kilosort_dir = Path((ClusteringTask & key).fetch1("clustering_output_dir"))
+
+        # check for manual curation and quality control file
+        kilosort.Kilosort.extract_clustering_info(kilosort_dir)
 
         metric_fp = kilosort_dir / "metrics.csv"
         rename_dict = {

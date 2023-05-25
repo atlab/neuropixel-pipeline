@@ -103,30 +103,36 @@ class ElectrodeConfig(dj.Lookup):
         """
 
     @classmethod
-    def add_new_config(cls, metadata:labview.LabviewNeuropixelMeta, probe_type:str, electrode_config_name:str=''):
+    def add_new_config(
+        cls,
+        metadata: labview.LabviewNeuropixelMeta,
+        probe_type: str,
+        electrode_config_name: str = "",
+    ):
         metadata = labview.LabviewNeuropixelMeta.model_validate(metadata)
-        electrode_config_key = {'electrode_config_hash': metadata.electrode_config_hash()}
+        electrode_config_key = {
+            "electrode_config_hash": metadata.electrode_config_hash()
+        }
         electrode_config_key["probe_type"] = probe_type
-        
+
         # ---- make new ElectrodeConfig if needed ----
         if not ElectrodeConfig & electrode_config_key:
             ElectrodeConfig.insert1(
-                {
-                    **electrode_config_key,
-                    "electrode_config_name": electrode_config_name
-                }
+                {**electrode_config_key, "electrode_config_name": electrode_config_name}
             )
 
             probe_rel = Probe & dict(probe=metadata.serial_number)
-            probe_type = probe_rel.fetch1('probe_type')
+            probe_type = probe_rel.fetch1("probe_type")
 
             probe_shank_rel = ProbeType.Electrode & dict(probe_type=probe_type)
-            electrode_rel = probe_shank_rel & [{'electrode': channel} for channel in metadata.channels()]
+            electrode_channels = metadata.electrode_config()["channel"]
+            electrode_rel = probe_shank_rel & [
+                {"electrode": channel} for channel in electrode_channels
+            ]
 
             ElectrodeConfig.Electrode.insert(
                 ({**electrode_config_key, **electrode} for electrode in electrode_rel),
-                ignore_extra_fields=True
+                ignore_extra_fields=True,
             )
 
         return electrode_config_key
-

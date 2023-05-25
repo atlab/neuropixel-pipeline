@@ -54,11 +54,13 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
     def check_scale_shape(cls, v):
         a, b = v
         return (a, b)
-    
+
     @staticmethod
-    def _validate_probe_naming_convention(meta:dict, original_key_name:str, normalized_key_name:str):
+    def _validate_probe_naming_convention(
+        meta: dict, original_key_name: str, normalized_key_name: str
+    ):
         if normalized_key_name in original_key_name:
-            meta[normalized_key_name] = meta.pop(original_key_name)    
+            meta[normalized_key_name] = meta.pop(original_key_name)
 
     @classmethod
     def from_h5(
@@ -77,10 +79,10 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
             for key in list(meta.keys()):
                 cls._validate_probe_naming_convention(meta, key, "SerialNum")
                 cls._validate_probe_naming_convention(meta, key, "t0")
-            
+
             for key in f.keys():
                 if "Config" in key:
-                    meta['Config'] = np.array(f[key])
+                    meta["Config"] = np.array(f[key])
 
         return cls.model_validate(meta)
 
@@ -96,7 +98,7 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
     def channels(self) -> List[int]:
         # can use self.config_data instead, with config_params's channel and port
         return list(int(channel_name[-4:]) for channel_name in self.channel_names)
-    
+
     def electrode_config(self) -> Dict[str, Any]:
         return dict(zip(self.config_params, self.config_data.T))
 
@@ -104,4 +106,6 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
         return utils.dict_to_uuid(self.model_dump())
 
     def to_metadata(self) -> NeuropixelConfig:
-        raise NotImplementedError("This isn't implemented but is needed for neuropixel config generation")
+        raise NotImplementedError(
+            "This isn't implemented but is needed for neuropixel config generation"
+        )

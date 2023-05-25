@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, constr, condecimal, PositiveInt
-from pydantic.dataclasses import dataclass
-from typing import Optional, List
+from pydantic import BaseModel, constr
+from typing import List
 from enum import Enum
-from datetime import datetime
 import numpy as np
-
-
-@dataclass
-class SessionModel:
-    session_id: PositiveInt
 
 
 class NeuropixelConfig(BaseModel):
@@ -130,6 +123,12 @@ class NeuropixelConfig(BaseModel):
         ]
 
 
+class SessionKey(BaseModel):
+    animal_id: int
+    session: int
+    scan_idx: int = None
+
+
 class AcquisitionSoftware(BaseModel):
     acq_software: constr(max_length=24)
 
@@ -137,49 +136,10 @@ class AcquisitionSoftware(BaseModel):
 class ProbeData(BaseModel):
     # unique indentifier for this model of probe, serial number
     probe: constr(max_length=32)
+    probe_type: constr(max_length=32)
+    probe_comment: constr(max_length=1000) = None
 
 
 class SkullReferenceValue(str, Enum):
     BREGMA = "Bregma"
     LAMBDA = "Lambda"
-
-
-class InsertionData(BaseModel):
-    # (um) anterior-posterior; ref is 0; more anterior is more positive
-    ap_location: condecimal(max_digits=6, decimal_places=2)
-
-    # (um) medial axis; ref is 0 ; more right is more positive
-    ml_location: condecimal(max_digits=6, decimal_places=2)
-
-    # (um) manipulator depth relative to surface of the brain (0); more ventral is more negative
-    depth: condecimal(max_digits=6, decimal_places=2)
-
-    # SkullReference, can be coerced from a str
-    skull_reference: SkullReferenceValue = "Bregma"
-
-    # (deg) - elevation - rotation about the ml-axis [0, 180] - w.r.t the z+ axis
-    theta: Optional[condecimal(max_digits=5, decimal_places=2)] = None
-
-    # (deg) - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis
-    phi: Optional[condecimal(max_digits=5, decimal_places=2)] = None
-
-    # (deg) rotation about the shank of the probe [-180, 180] - clockwise is increasing in degree - 0 is the probe-front facing anterior
-    beta: Optional[condecimal(max_digits=5, decimal_places=2)] = None
-
-
-class EphysRecordingData(BaseModel):
-    sampling_rate: float
-    recording_datetime: datetime
-    recording_duration: float
-
-    class EphysFilePath(BaseModel):
-        file_path: constr(max_length=255)
-
-
-class LFPData(BaseModel):  # local field potentials
-    lfp_sampling_rate: float
-    lfp_time_stamps: List[datetime]
-    lfp_mean: List[float]
-
-    class ElectrodeData(BaseModel):
-        lfp: List[float]  # recorded lfp at this electrode
