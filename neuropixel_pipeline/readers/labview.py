@@ -5,7 +5,7 @@ Custom labview neuropixel aquisition format reader
 from __future__ import annotations
 
 from pathlib import Path
-from pydantic import BaseModel, Field, field_validator, constr, computed_field
+from pydantic import BaseModel, Field, field_validator, constr
 from typing import List, Tuple, Any, Optional, Dict
 import numpy as np
 

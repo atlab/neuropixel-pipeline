@@ -192,9 +192,107 @@ class LFP(dj.Imported):
         """
 
     def make(self, key):
-        # based on acq_software switch to
-        pass
+        """Populates the LFP tables."""
+        acq_software = (EphysRecording * ProbeInsertion & key).fetch1("acq_software")
 
+        electrode_keys, lfp = [], []
+
+        if acq_software == "LabviewV1":
+            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key['filepath'])
+
+            raise NotImplementedError("LabviewV1 not implemented yet for LFP population")
+        elif acq_software == "SpikeGLX":
+            spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
+            spikeglx_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
+
+            lfp_channel_ind = spikeglx_recording.lfmeta.recording_channels[
+                -1 :: -self._skip_channel_counts
+            ]
+
+            # Extract LFP data at specified channels and convert to uV
+            lfp = spikeglx_recording.lf_timeseries[
+                :, lfp_channel_ind
+            ]  # (sample x channel)
+            lfp = (
+                lfp * spikeglx_recording.get_channel_bit_volts("lf")[lfp_channel_ind]
+            ).T  # (channel x sample)
+
+            self.insert1(
+                dict(
+                    key,
+                    lfp_sampling_rate=spikeglx_recording.lfmeta.meta["imSampRate"],
+                    lfp_time_stamps=(
+                        np.arange(lfp.shape[1])
+                        / spikeglx_recording.lfmeta.meta["imSampRate"]
+                    ),
+                    lfp_mean=lfp.mean(axis=0),
+                )
+            )
+
+            electrode_query = (
+                probe.ProbeType.Electrode
+                * probe.ElectrodeConfig.Electrode
+                * EphysRecording
+                & key
+            )
+            probe_electrodes = {
+                (shank, shank_col, shank_row): key
+                for key, shank, shank_col, shank_row in zip(
+                    *electrode_query.fetch("KEY", "shank", "shank_col", "shank_row")
+                )
+            }
+
+            for recorded_site in lfp_channel_ind:
+                shank, shank_col, shank_row, _ = spikeglx_recording.apmeta.shankmap[
+                    "data"
+                ][recorded_site]
+                electrode_keys.append(probe_electrodes[(shank, shank_col, shank_row)])
+        elif acq_software == "Open Ephys":
+            oe_probe = get_openephys_probe_data(key)
+
+            lfp_channel_ind = np.r_[
+                len(oe_probe.lfp_meta["channels_indices"])
+                - 1 : 0 : -self._skip_channel_counts
+            ]
+
+            # (sample x channel)
+            lfp = oe_probe.lfp_timeseries[:, lfp_channel_ind]
+            lfp = (
+                lfp * np.array(oe_probe.lfp_meta["channels_gains"])[lfp_channel_ind]
+            ).T  # (channel x sample)
+            lfp_timestamps = oe_probe.lfp_timestamps
+
+            self.insert1(
+                dict(
+                    key,
+                    lfp_sampling_rate=oe_probe.lfp_meta["sample_rate"],
+                    lfp_time_stamps=lfp_timestamps,
+                    lfp_mean=lfp.mean(axis=0),
+                )
+            )
+
+            electrode_query = (
+                probe.ProbeType.Electrode
+                * probe.ElectrodeConfig.Electrode
+                * EphysRecording
+                & key
+            )
+            probe_electrodes = {
+                key["electrode"]: key for key in electrode_query.fetch("KEY")
+            }
+
+            electrode_keys.extend(
+                probe_electrodes[channel_idx] for channel_idx in lfp_channel_ind
+            )
+        else:
+            raise NotImplementedError(
+                f"LFP extraction from acquisition software"
+                f" of type {acq_software} is not yet implemented"
+            )
+
+        # single insert in loop to mitigate potential memory issue
+        for electrode_key, lfp_trace in zip(electrode_keys, lfp):
+            self.Electrode.insert1({**key, **electrode_key, "lfp": lfp_trace})
 
 # ------------ Clustering --------------
 
@@ -302,14 +400,12 @@ class Clustering(dj.Imported):
         source_key = (ClusteringTask & key).fetch1()
         task_runner = ClusteringTaskRunner(**source_key)
         time_finish = task_runner.trigger_clustering()  # .load_time_finished()
-        current_time = (
-            datetime.datetime.now()
-        )  # FIXME: this should be time of the clustering, which isn't always triggered
-
+        
+        creation_time, _, _ = kilosort.extract_clustering_info(source_key['file_path'])
         self.insert1(
             dict(
                 **source_key,
-                clustering_time=current_time,
+                clustering_time=creation_time,
             ),
             ignore_extra_fields=True,
         )
@@ -345,6 +441,40 @@ class Curation(dj.Manual):
     -> CurationType                     # what type of curation has been performed on this clustering result?
     curation_note='': varchar(2000)
     """
+
+    def create1_from_clustering_task(self, key, curation_note=""):
+        """
+        A function to create a new corresponding "Curation" for a particular
+        "ClusteringTask"
+        """
+        if key not in Clustering():
+            raise ValueError(
+                f"No corresponding entry in Clustering available"
+                f" for: {key}; do `Clustering.populate(key)`"
+            )
+
+        task_mode, output_dir = (ClusteringTask & key).fetch1(
+            "task_mode", "clustering_output_dir"
+        )
+        
+        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(
+            key['file_path']
+        )
+        # Synthesize curation_id
+        curation_id = (
+            dj.U().aggr(self & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+        )
+        self.insert1(
+            {
+                **key,
+                "curation_id": curation_id,
+                "curation_time": creation_time,
+                "curation_output_dir": output_dir,
+                "quality_control": is_qc,
+                "manual_curation": is_curated,
+                "curation_note": curation_note,
+            }
+        )
 
 
 # TODO: Remove longblob types, replace with external-attach (or some form of this)
@@ -487,8 +617,7 @@ class WaveformSet(dj.Imported):
 
     def make(self, key):
         """Populates waveform tables."""
-        output_dir = (Curation & key).fetch1("curation_output_dir")
-        kilosort_dir = find_full_path(get_ephys_root_data_dir(), output_dir)
+        kilosort_dir = key['file_path']
 
         kilosort_dataset = kilosort.Kilosort(kilosort_dir)
 
@@ -543,7 +672,9 @@ class WaveformSet(dj.Imported):
                     yield unit_peak_waveform, unit_electrode_waveforms
 
         else:
-            if acq_software == "SpikeGLX":
+            if acq_software == "LabviewV1":
+                neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(key['file_path'])
+            elif acq_software == "SpikeGLX":
                 spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
                 neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
             elif acq_software == "Open Ephys":
@@ -552,6 +683,8 @@ class WaveformSet(dj.Imported):
                 )
                 openephys_dataset = openephys.OpenEphys(session_dir)
                 neuropixels_recording = openephys_dataset.probes[probe_serial_number]
+            else:
+                raise NotImplementedError(f"for acq_software == {acq_software}")
 
             def yield_unit_waveforms():
                 for unit_dict in units.values():

@@ -10,7 +10,7 @@ services:
     entrypoint: ["/bin/bash"]
     command: ["-c",
       "cd /src &&\
-      pip3 install . &&\
+      pip3 install -e . &&\
       cd notebooks &&\
       jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=''"]
     ports:

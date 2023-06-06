@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: neuropixel-jupyter
+  labels:
+    app: neuropixel-jupyter # Reference this in your service
+spec:
+  restartPolicy: OnFailure
+  hostNetwork: true
+  volumes:
+    - name: mnt
+      hostPath:
+        path: /mnt
+  priorityClassName: medium-priority #high-priority
+  containers:
+    - name: neuropixel-jupyter
+      image: at-docker.ad.bcm.edu:5000/kilosort4:latest
+      imagePullPolicy: Always # needed because the image tag might not be latest
+      volumeMounts:
+        - name: mnt
+          mountPath: /mnt
+      resources:
+        requests:
+          cpu: "1"
+          memory: "64Gi"
+        limits:
+          nvidia.com/gpu: "1"
+      env:
+        - name: DJ_HOST
+          valueFrom:
+            secretKeyRef:
+              name: datajoint-credentials
+              key: DJ_HOST
+        - name: DJ_USER
+          valueFrom:
+            secretKeyRef:
+              name: datajoint-credentials
+              key: DJ_USER
+        - name: DJ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: datajoint-credentials
+              key: DJ_PASS
+      command: ["/bin/bash"]
+      args: ["-c",
+        "mkdir -p /src/notebooks &&\
+        cd /src &&\
+        git clone https://github.com/Cpapa97/neuropixel-pipeline.git &&\
+        cd neuropixel-pipeline &&\
+        git switch data-interface &&\
+        pip3 install . &&\
+        cd notebooks &&\
+        jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=''"]
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: neuropixel-jupyter-service
+spec:
+  type: NodePort
+  selector:
+    app: neuropixel-jupyter # reference the app label from the top
+  ports:
+  - protocol: TCP
+    port: 8888
+    targetPort: 8888
+    nodePort: 32000
