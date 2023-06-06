@@ -43,7 +43,7 @@ spec:
               key: DJ_PASS
       command: ["/bin/bash"]
       args: ["-c",
-        "mkdir -p /src/notebooks &&\
+        "mkdir -p /src &&\
         cd /src &&\
         git clone https://github.com/Cpapa97/neuropixel-pipeline.git &&\
         cd neuropixel-pipeline &&\
