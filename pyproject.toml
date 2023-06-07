@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neuropixel_pipeline"
+version = "0.0.1"
 authors = [
     {name = "Christos papadopoulos", email = "cpapadop@bcm.edu"},
 ]
@@ -16,24 +17,26 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "pydantic>=2.0a1",
-    # "devtools",
+    "pydantic>=2.0b1",
+    "devtools",
     "datajoint==0.12.9",
     "numpy==1.23", # currently needed to deal with np.float deprecation in datajoint
     # "polars[numpy,pandas]",
     "pandas",
     "h5py",
 ]
-dynamic = ["version"]
+# dynamic = ["version"]
 
 [project.optional-dependencies]
-kilosort = [] # this will point to the pykilosort that we use
+# gpu = []
+# kilosort = [] # this will point to the pykilosort that we use
+# ecephys = ["ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git"]
 
 [tool.setuptools]
 packages = ["neuropixel_pipeline"]
 
-[tool.setuptools.dynamic]
-version = {attr = "neuropixel_pipeline.__version__"}
+# [tool.setuptools.dynamic]
+# version = {attr = "neuropixel_pipeline.__version__"}
 
 [tool.ruff]
 line-length = 120

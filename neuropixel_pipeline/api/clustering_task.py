@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from enum import Enum
-from pathlib import Path
 
 
 class ClusteringTaskMode(str, Enum):
@@ -9,8 +8,7 @@ class ClusteringTaskMode(str, Enum):
 
 
 class ClusteringTaskRunner(BaseModel):
-    file_path: Path
-    clustering_output_dir: Path
+    clustering_params: dict
     task_mode: ClusteringTaskMode
 
     def load_time_finished(self):
@@ -20,5 +18,17 @@ class ClusteringTaskRunner(BaseModel):
         pass
 
     def trigger_clustering(self):
-        # Using docker or kubernetes
-        pass
+        # Locally or using an HTTP request to a REST server
+        if self.task_mode is ClusteringTaskMode.TRIGGER:
+            try:
+                from kilosort_runner.run import KilosortParams
+
+                KilosortParams.model_validate(self.clustering_params).run_kilosort()
+            except Exception as e:
+                print(f"Caught exception when trying to trigger Kilosort:\n{e}")
+        elif self.task_mode is ClusteringTaskMode.LOAD:
+            print("task mode set to 'load', not doing anything")
+        else:
+            raise NotImplementedError(
+                f"This task mode '{self.task_mode}' is not supported"
+            )

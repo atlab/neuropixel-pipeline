@@ -401,8 +401,8 @@ class Clustering(dj.Imported):
 
     def make(self, key):
         source_key = (ClusteringTask & key).fetch1()
-        task_runner = ClusteringTaskRunner(**source_key)
-        time_finish = task_runner.trigger_clustering()  # .load_time_finished()
+        task_runner = ClusteringTaskRunner(source_key)
+        task_runner.trigger_clustering()  # run kilosort if it's set to trigger
 
         creation_time, _, _ = kilosort.extract_clustering_info(source_key["file_path"])
         self.insert1(
@@ -812,6 +812,7 @@ class QualityMetrics(dj.Imported):
         if not metric_fp.exists():
             print("Constructing Quality Control metrics.csv file")
             import json
+
             params = json.loads((ClusteringParamSet & key).fetch1("params"))
             results = WaveformSetRunner(params).calculate()
             print(f"WaveformSetRunner results: {results}")

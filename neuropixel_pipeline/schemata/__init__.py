@@ -123,13 +123,15 @@ class PopulateHelper:
             settings["n_chan_bin"] = settings["NchanTOT"]
             return settings
 
-        def run_clustering(self):
+        def run_clustering(self, clustering_output_dir=Path("spikes_kilosort4")):
             task_source_rel = (ephys.EphysRecording & self.insertion_key).proj() * (
-                ephys.ClusteringParamSet() & {"paramset_idx": 1}
+                ephys.ClusteringParamSet() & {"paramset_idx": self.paramset_idx}
             ).proj()
             task_source_key = task_source_rel.fetch1()
             task_source_key["clustering_output_dir"] = (
-                self.session_dir / "spikes_kilosort4"
+                clustering_output_dir
+                if clustering_output_dir.is_absolute()
+                else self.session_dir / clustering_output_dir
             )
             ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
