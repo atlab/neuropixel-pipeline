@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neuropixel_pipeline"
-version = "0.0.1"
 authors = [
     {name = "Christos papadopoulos", email = "cpapadop@bcm.edu"},
 ]
@@ -25,7 +24,7 @@ dependencies = [
     "pandas",
     "h5py",
 ]
-# dynamic = ["version"]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 # gpu = []
@@ -35,8 +34,8 @@ dependencies = [
 [tool.setuptools]
 packages = ["neuropixel_pipeline"]
 
-# [tool.setuptools.dynamic]
-# version = {attr = "neuropixel_pipeline.__version__"}
+[tool.setuptools.dynamic]
+version = {attr = "neuropixel_pipeline.__version__"}
 
 [tool.ruff]
 line-length = 120
