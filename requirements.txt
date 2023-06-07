@@ -1,6 +1,0 @@
-pydantic>=2.0a4
-datajoint==0.12.9
-numpy==1.23
-pandas
-h5py
-ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git
