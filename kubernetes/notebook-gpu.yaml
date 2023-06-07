@@ -62,10 +62,11 @@ spec:
         git clone https://github.com/Cpapa97/neuropixel-pipeline.git &&\
         cd neuropixel-pipeline &&\
         git switch data-interface; \
-        conda run --no-capture-output -n kilosort &&\
-        pip3 install . &&\
+        conda activate kilosort; \
+        python -m pip install . &&\
         cd notebooks &&\
         jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=''"]
+        # conda run --no-capture-output -n kilosort &&\
 
 ---
 kind: Service

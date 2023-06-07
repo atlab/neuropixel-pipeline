@@ -81,7 +81,7 @@ class PopulateHelper:
 
         @computed_field
         @property
-        def task_source_key(self):
+        def task_source_key(self) -> dict:
             return dict(
                 **self.insertion_key,
                 file_path=str(self.session_dir),
