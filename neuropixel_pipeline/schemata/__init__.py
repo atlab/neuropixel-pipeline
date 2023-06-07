@@ -41,7 +41,9 @@ class PopulateHelper:
         def run(self):
             # Autoincrement new session
             ephys.Session.add_session(self.session_key.model_dump())
-            session_id = ephys.Session.get_session_id(self.session_key.model_dump()).fetch1('session_id')
+            session_id = ephys.Session.get_session_id(
+                self.session_key.model_dump()
+            ).fetch1("session_id")
 
             labview_metadata = labview.LabviewNeuropixelMeta.from_h5(self.session_dir)
 
@@ -151,7 +153,9 @@ class PopulateHelper:
             ephys.CuratedClustering.populate()
 
     class PostClustering(BaseModel):
-        pass
+        def run(self, *restrictions):
+            ephys.QualityMetrics.populate(*restrictions)
+            ephys.WaveformSet.populate(*restrictions)
 
     def run(self):
         raise NotImplementedError

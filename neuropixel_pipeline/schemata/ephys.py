@@ -2,9 +2,9 @@
 
 import datajoint as dj
 import numpy as np
-import datetime
 
 from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
+from neuropixel_pipeline.api.postclustering import WaveformSetRunner
 from . import probe
 from .. import utils
 from ..readers import labview, kilosort
@@ -198,9 +198,11 @@ class LFP(dj.Imported):
         electrode_keys, lfp = [], []
 
         if acq_software == "LabviewV1":
-            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key['filepath'])
+            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key["filepath"])
 
-            raise NotImplementedError("LabviewV1 not implemented yet for LFP population")
+            raise NotImplementedError(
+                "LabviewV1 not implemented yet for LFP population"
+            )
         elif acq_software == "SpikeGLX":
             spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
             spikeglx_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
@@ -293,6 +295,7 @@ class LFP(dj.Imported):
         # single insert in loop to mitigate potential memory issue
         for electrode_key, lfp_trace in zip(electrode_keys, lfp):
             self.Electrode.insert1({**key, **electrode_key, "lfp": lfp_trace})
+
 
 # ------------ Clustering --------------
 
@@ -400,8 +403,8 @@ class Clustering(dj.Imported):
         source_key = (ClusteringTask & key).fetch1()
         task_runner = ClusteringTaskRunner(**source_key)
         time_finish = task_runner.trigger_clustering()  # .load_time_finished()
-        
-        creation_time, _, _ = kilosort.extract_clustering_info(source_key['file_path'])
+
+        creation_time, _, _ = kilosort.extract_clustering_info(source_key["file_path"])
         self.insert1(
             dict(
                 **source_key,
@@ -456,9 +459,9 @@ class Curation(dj.Manual):
         task_mode, output_dir = (ClusteringTask & key).fetch1(
             "task_mode", "clustering_output_dir"
         )
-        
+
         creation_time, is_curated, is_qc = kilosort.extract_clustering_info(
-            key['file_path']
+            key["file_path"]
         )
         # Synthesize curation_id
         curation_id = (
@@ -617,7 +620,7 @@ class WaveformSet(dj.Imported):
 
     def make(self, key):
         """Populates waveform tables."""
-        kilosort_dir = key['file_path']
+        kilosort_dir = key["file_path"]
 
         kilosort_dataset = kilosort.Kilosort(kilosort_dir)
 
@@ -673,7 +676,9 @@ class WaveformSet(dj.Imported):
 
         else:
             if acq_software == "LabviewV1":
-                neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(key['file_path'])
+                neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(
+                    key["file_path"]
+                )
             elif acq_software == "SpikeGLX":
                 spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
                 neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
@@ -805,7 +810,11 @@ class QualityMetrics(dj.Imported):
         }
 
         if not metric_fp.exists():
-            raise FileNotFoundError(f"QC metrics file not found: {metric_fp}")
+            print("Constructing Quality Control metrics.csv file")
+            import json
+            params = json.loads((ClusteringParamSet & key).fetch1("params"))
+            results = WaveformSetRunner(params).calculate()
+            print(f"WaveformSetRunner results: {results}")
 
         metrics_df = pd.read_csv(metric_fp)
         metrics_df.set_index("cluster_id", inplace=True)

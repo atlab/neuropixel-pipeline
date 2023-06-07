@@ -89,10 +89,10 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
     @classmethod
     def from_metafile(cls) -> LabviewNeuropixelMeta:
         """
-        This will be implemented when the metadata from labview is separated from the h5.
+        This will be implemented when the metadata from labview is separated from the h5
         """
         raise NotImplementedError(
-            "This will be implemented when the metadata from labview is separated from the h5"
+            "This will be implemented when the labview metadata is separate from the h5"
         )
 
     def channels(self) -> List[int]:

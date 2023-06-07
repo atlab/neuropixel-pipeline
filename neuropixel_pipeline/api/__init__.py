@@ -1,3 +1,6 @@
-# Experimenting on how to organize the API, which will likely have a layer of abstraction over the Datajoint schema
+# flake8: noqa
 
-from . import metadata, clustering, preclustering
+# Experimenting on how to organize the API,
+# which will likely have a layer of abstraction over the Datajoint schema
+
+from . import metadata, clustering, preclustering, postclustering

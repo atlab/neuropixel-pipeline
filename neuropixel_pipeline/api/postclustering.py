@@ -8,14 +8,17 @@ from ecephys_spike_sorting.modules import quality_metrics, mean_waveforms
 
 # runs ecephys_spike_sorting to produce the waveform analysis and quality metrics files
 
+
 class EcephysSpikeSorting(BaseModel):
     # input_json: str # likely don't want to rely on input json here
     args: dict
     output_json: Optional[str] = None
 
+
 class WaveformSetRunner(EcephysSpikeSorting):
     def calculate(self):
         return mean_waveforms.calculate_mean_waveforms(self.args)
+
 
 class QualityMetricsRunner(EcephysSpikeSorting):
     def calculate(self):
