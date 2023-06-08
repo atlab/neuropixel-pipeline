@@ -440,12 +440,11 @@ class Curation(dj.Manual):
     ---
     curation_time: datetime             # time of generation of this set of curated clustering results
     curation_output_dir: varchar(255)   # output directory of the curated results, relative to root data directory
-    quality_control: bool               # has this clustering result undergone quality control?
     -> CurationType                     # what type of curation has been performed on this clustering result?
     curation_note='': varchar(2000)
     """
 
-    def create1_from_clustering_task(self, key, curation_note=""):
+    def create1_from_clustering_task(self, key, curation_note="", skip_duplicates=True):
         """
         A function to create a new corresponding "Curation" for a particular
         "ClusteringTask"
@@ -473,11 +472,12 @@ class Curation(dj.Manual):
                 "curation_id": curation_id,
                 "curation_time": creation_time,
                 "curation_output_dir": output_dir,
-                "quality_control": is_qc,
                 "manual_curation": is_curated,
                 "curation_note": curation_note,
-            }
-        )
+            },
+        skip_duplicates=skip_duplicates)
+        
+        return curation_id
 
 
 # TODO: Remove longblob types, replace with external-attach (or some form of this)

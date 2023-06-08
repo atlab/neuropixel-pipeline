@@ -144,14 +144,12 @@ class PopulateHelper:
             )
             if curation_input.curation_output_dir is None:
                 curation_input.curation_output_dir = curation_source_key["file_path"]
-            ephys.Curation.insert1(
+            ephys.Curation.create1_from_clustering_task(
                 dict(
                     **curation_source_key,
                     **curation_input.model_dump(),
-                ),
-                skip_duplicates=True,
+                )
             )
-
             ephys.CuratedClustering.populate()
 
     class PostClustering(BaseModel):
