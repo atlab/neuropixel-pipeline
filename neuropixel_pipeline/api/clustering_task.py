@@ -11,12 +11,6 @@ class ClusteringTaskRunner(BaseModel):
     clustering_params: dict
     task_mode: ClusteringTaskMode
 
-    def load_time_finished(self):
-        if self.task_mode is ClusteringTaskMode.TRIGGER:
-            self.trigger_clustering()
-        # then load results
-        pass
-
     def trigger_clustering(self):
         # Locally or using an HTTP request to a REST server
         if self.task_mode is ClusteringTaskMode.TRIGGER:
