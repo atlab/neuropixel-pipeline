@@ -31,6 +31,7 @@ class Session(dj.Manual):
     animal_id=null: int unsigned # animal id
     session=null: smallint unsigned # original session id
     scan_idx=null: smallint unsigned # scan idx
+    timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when this session was inserted
     """
 
     @classmethod
