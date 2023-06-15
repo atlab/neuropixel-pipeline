@@ -6,12 +6,81 @@ from . import probe  # noqa: E402
 from . import ephys  # noqa: E402
 
 from pydantic import BaseModel, constr, computed_field  # noqa: E402
+from pydantic.dataclasses import dataclass
 from typing import List, Optional  # noqa: E402
 from pathlib import Path  # noqa: E402
 from ..readers import labview  # noqa: E402
 
 from .. import api  # noqa: E402
 
+
+class DatajointInsertUtil:
+    def run(self):
+        self.table.insert1(self.__dict__)
+
+
+class BetterHelper(BaseModel):
+    # doing this doesn't actually forward the values to the nested dataclass, so they're not actually accessible or tied to the nested class in any way except nominally.
+    skip_duplicates: bool = False
+
+    @dataclass
+    class ProbeData(DatajointInsertUtil):
+        probes: List[api.metadata.ProbeData]
+
+    @dataclass
+    class PreClustering:
+        session_key: api.metadata.SessionKey
+        insertion_number: int
+        session_dir: Path
+        acq_software: constr(max_length=24)
+        insertion_location: Optional[api.preclustering.InsertionData] = None
+
+    @dataclass
+    class Clustering:
+        insertion_key: dict
+        session_dir: Path
+        paramset_idx: int
+        task_mode: api.clustering.ClusteringTaskMode = "load"
+    
+        @staticmethod
+        def new_parameters(
+            settings: dict,
+            clustering_method: str,
+            description: str,
+            skip_duplicates=True,
+        ):
+            ephys.ClusteringParamSet.fill(
+                params=settings,
+                clustering_method=clustering_method,
+                description=description,
+                skip_duplicates=skip_duplicates,
+            )
+
+        @staticmethod
+        def default_parameters():
+            settings = {
+                "NchanTOT": 385,
+                "fs": 30000,
+                "nt": 61,
+                "Th": 8,
+                "spkTh": 8,
+                "Th_detect": 9,
+                "nwaves": 6,
+                "nskip": 25,
+                "nblocks": 5,
+                "binning_depth": 5,
+                "sig_interp": 20,
+                "probe_name": "neuropixPhase3B1_kilosortChanMap.mat",
+            }
+            settings["nt0min"] = int(20 * settings["nt"] / 61)
+            settings["NT"] = 2 * settings["fs"]
+            settings["n_chan_bin"] = settings["NchanTOT"]
+            return settings
+
+    @dataclass
+    class PostClustering:
+        pass
+    
 
 class PopulateHelper:
     class Setup(BaseModel):
@@ -40,7 +109,7 @@ class PopulateHelper:
 
         def run(self):
             # Autoincrement new session
-            ephys.Session.add_session(self.session_key.model_dump())
+            ephys.Session.add_session(self.session_key.model_dump()) ### START HERE: I need to look at the tables and see the effect of inserting a session, and then another session.
             session_id = ephys.Session.get_session_id(
                 self.session_key.model_dump()
             ).fetch1("session_id")
