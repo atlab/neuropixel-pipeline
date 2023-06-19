@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 from enum import Enum
 
 
@@ -8,8 +9,8 @@ class ClusteringTaskMode(str, Enum):
 
 
 class ClusteringTaskRunner(BaseModel):
-    clustering_params: dict
     task_mode: ClusteringTaskMode
+    clustering_params: Optional[dict] = None
 
     def trigger_clustering(self):
         # Locally or using an HTTP request to a REST server
