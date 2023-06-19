@@ -4,7 +4,10 @@ import datajoint as dj
 import numpy as np
 
 from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
-from neuropixel_pipeline.api.postclustering import WaveformSetRunner, QualityMetricsRunner
+from neuropixel_pipeline.api.postclustering import (
+    WaveformSetRunner,
+    QualityMetricsRunner,
+)
 from . import probe
 from .. import utils
 from ..readers import labview, kilosort
@@ -38,12 +41,13 @@ class Session(dj.Manual):
     @classmethod
     def add_session(cls, session_meta, error_on_duplicate=True):
         if not cls & session_meta:
-            cls.insert1(session_meta) # should just hash as the primary key and put the rest as a longblob?
+            cls.insert1(
+                session_meta
+            )  # should just hash as the primary key and put the rest as a longblob?
         elif error_on_duplicate:
             raise ValueError("Duplicate secondary keys")
         else:
             pass
-        
 
 
 @schema
@@ -97,10 +101,11 @@ class InsertionLocation(dj.Manual):
     beta=null:   decimal(5, 2) # (deg) rotation about the shank of the probe [-180, 180] - clockwise is increasing in degree - 0 is the probe-front facing anterior
     """
 
+
 @schema
 class EphysFile(dj.Manual):
     """Paths for ephys sessions"""
-    
+
     definition = """
     # Paths for ephys sessions
     -> ProbeInsertion
@@ -409,7 +414,9 @@ class Clustering(dj.Imported):
         task_runner.trigger_clustering()  # run kilosort if it's set to trigger
 
         clustering_output_dir = Path(source_key["clustering_output_dir"])
-        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(clustering_output_dir)
+        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(
+            clustering_output_dir
+        )
         self.insert1(
             dict(
                 **source_key,
@@ -449,7 +456,9 @@ class Curation(dj.Manual):
     curation_note='': varchar(2000)
     """
 
-    def create1_from_clustering_task(self, key, curation_output_dir, curation_note="", skip_duplicates=True):
+    def create1_from_clustering_task(
+        self, key, curation_output_dir, curation_note="", skip_duplicates=True
+    ):
         """
         A function to create a new corresponding "Curation" for a particular
         "ClusteringTask"
@@ -464,7 +473,9 @@ class Curation(dj.Manual):
             "task_mode", "clustering_output_dir"
         )
 
-        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(curation_output_dir)
+        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(
+            curation_output_dir
+        )
 
         # Synthesize curation_id (why no auto_increment??)
         curation_id = (
@@ -479,8 +490,9 @@ class Curation(dj.Manual):
                 "manual_curation": is_curated,
                 "curation_note": curation_note,
             },
-        skip_duplicates=skip_duplicates)
-        
+            skip_duplicates=skip_duplicates,
+        )
+
         return curation_id
 
 
@@ -549,9 +561,9 @@ class CuratedClustering(dj.Imported):
         labview_metadata = labview.LabviewNeuropixelMeta.from_h5(ephys_session_dir)
         electrode_config_hash = labview_metadata.electrode_config_hash()
 
-        probe_type = (
-            probe.Probe & dict(probe=labview_metadata.serial_number)
-        ).fetch1("probe_type")
+        probe_type = (probe.Probe & dict(probe=labview_metadata.serial_number)).fetch1(
+            "probe_type"
+        )
 
         # -- Insert unit, label, peak-chn
         units = []
@@ -587,6 +599,7 @@ class CuratedClustering(dj.Imported):
         self.insert1(key)
         insert_units = [{**key, **u} for u in units]
         self.Unit.insert(insert_units)
+
 
 # important to note the original source of these quality metrics:
 #   https://allensdk.readthedocs.io/en/latest/
@@ -807,7 +820,9 @@ class QualityMetrics(dj.Imported):
         curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
         # check for manual curation and quality control file
-        kilosort.Kilosort.extract_clustering_info(curation_output_dir) # this returns variables, but they aren't being used???
+        kilosort.Kilosort.extract_clustering_info(
+            curation_output_dir
+        )  # this returns variables, but they aren't being used???
 
         metric_fp = curation_output_dir / "metrics.csv"
         rename_dict = {

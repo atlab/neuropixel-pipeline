@@ -30,7 +30,7 @@ class ClusteringTaskRunner(BaseModel):
                     params=params,
                 )
                 runner.run_kilosort()
-            
+
             except Exception as e:
                 print(f"Caught exception when trying to trigger Kilosort:\n{e}")
         elif self.task_mode is ClusteringTaskMode.LOAD:

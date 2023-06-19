@@ -129,7 +129,10 @@ class Kilosort:
 
         # Read the Cluster Groups
         # yes, both cluster_col_name's currently are KSLabel but sometimes it isn't hahaha
-        for cluster_pattern, cluster_col_name in [("cluster_KSLabel.*", "KSLabel"), ("cluster_group.*", "group")]:
+        for cluster_pattern, cluster_col_name in [
+            ("cluster_KSLabel.*", "KSLabel"),
+            ("cluster_group.*", "group"),
+        ]:
             try:
                 cluster_file = next(self._kilosort_dir.glob(cluster_pattern))
             except StopIteration:

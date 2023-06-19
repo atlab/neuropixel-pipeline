@@ -41,7 +41,7 @@ class BetterHelper(BaseModel):
         session_dir: Path
         paramset_idx: int
         task_mode: api.clustering.ClusteringTaskMode = "load"
-    
+
         @staticmethod
         def new_parameters(
             settings: dict,
@@ -80,7 +80,7 @@ class BetterHelper(BaseModel):
     @dataclass
     class PostClustering:
         pass
-    
+
 
 class PopulateHelper:
     class Setup(BaseModel):
@@ -109,8 +109,12 @@ class PopulateHelper:
 
         def run(self):
             # Autoincrement new session
-            ephys.Session.insert1(self.session_key.model_dump(), skip_duplicates=self.skip_duplicates)
-            session_id = (ephys.Session & self.session_key.model_dump()).fetch1("session_id")
+            ephys.Session.insert1(
+                self.session_key.model_dump(), skip_duplicates=self.skip_duplicates
+            )
+            session_id = (ephys.Session & self.session_key.model_dump()).fetch1(
+                "session_id"
+            )
 
             labview_metadata = labview.LabviewNeuropixelMeta.from_h5(self.session_dir)
 
