@@ -550,7 +550,7 @@ class CuratedClustering(dj.Imported):
         electrode_config_hash = labview_metadata.electrode_config_hash()
 
         probe_type = (
-            probe.Probe & dict(serial_number=labview_metadata.serial_number)
+            probe.Probe & dict(probe=labview_metadata.serial_number)
         ).fetch1("probe_type")
 
         # -- Insert unit, label, peak-chn
