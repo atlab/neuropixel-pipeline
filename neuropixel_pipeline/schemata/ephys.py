@@ -408,7 +408,7 @@ class Clustering(dj.Imported):
         task_runner = ClusteringTaskRunner.model_validate(source_key)
         task_runner.trigger_clustering()  # run kilosort if it's set to trigger
 
-        creation_time, _, _ = kilosort.extract_clustering_info(source_key["clustering_output_dir"])
+        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(source_key["clustering_output_dir"])
         self.insert1(
             dict(
                 **source_key,
