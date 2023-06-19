@@ -6,7 +6,7 @@ from . import probe  # noqa: E402
 from . import ephys  # noqa: E402
 
 from pydantic import BaseModel, constr, computed_field  # noqa: E402
-from pydantic.dataclasses import dataclass
+from pydantic.dataclasses import dataclass  # noqa: E402
 from typing import List, Optional  # noqa: E402
 from pathlib import Path  # noqa: E402
 from ..readers import labview  # noqa: E402
