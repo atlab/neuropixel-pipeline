@@ -40,9 +40,10 @@ class EphysParams(BaseModel):
     )
     cluster_group_file_name: str = Field(default="cluster_group.tsv")
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def coerce_numpy(cls, values):
         import numpy as np
+
         values.reference_channels = np.array(values.reference_channels)
         return values
 

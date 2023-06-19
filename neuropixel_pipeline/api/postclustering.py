@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 from typing import Optional
-from .ecephys_common import EphysParams, Directories, WaveformMetricsFile, ClusterMetricsFile
+from .ecephys_common import (
+    EphysParams,
+    Directories,
+    WaveformMetricsFile,
+    ClusterMetricsFile,
+)
 from ecephys_spike_sorting.modules import quality_metrics, mean_waveforms
 
 # i.e. Waveforms and QualityMetrics
