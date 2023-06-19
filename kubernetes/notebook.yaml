@@ -45,9 +45,8 @@ spec:
       args: ["-c",
         "mkdir -p /src &&\
         cd /src &&\
-        git clone https://github.com/Cpapa97/neuropixel-pipeline.git &&\
+        git clone https://github.com/atlab/neuropixel-pipeline.git &&\
         cd neuropixel-pipeline &&\
-        git switch data-interface &&\
         pip3 install . &&\
         cd notebooks &&\
         jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=''"]
