@@ -18,11 +18,11 @@ class EcephysSpikeSorting(BaseModel):
 
 class WaveformSetRunner(EcephysSpikeSorting):
     def calculate(self):
-        import ecephys_spike_sorting.modules.quality_metrics.__main__  # noqa: F401
+        import ecephys_spike_sorting.modules.mean_waveforms.__main__  # noqa: F401\        
         return mean_waveforms.__main__.calculate_mean_waveforms(self.args)
 
 
 class QualityMetricsRunner(EcephysSpikeSorting):
     def calculate(self):
-        import ecephys_spike_sorting.modules.mean_waveforms.__main__  # noqa: F401
+        import ecephys_spike_sorting.modules.quality_metrics.__main__  # noqa: F401
         return quality_metrics.__main__.calculate_quality_metrics(self.args)
