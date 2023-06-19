@@ -1,5 +1,6 @@
 # Custom
-.vscode/
+/.vscode/
+!.vscode/extensions.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -130,3 +131,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ruff linter
+.ruff_cache/

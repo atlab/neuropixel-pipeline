@@ -1,20 +1,16 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Ubuntu",
+	"name": "Python 3",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:bionic",
+	"image": "mcr.microsoft.com/devcontainers/python:0-3.8",
 	"features": {
-		"ghcr.io/devcontainers/features/nvidia-cuda:1": {
-			"cudaVersion": "11.4",
-			"cudnnVersion": "8.6.0.163"
-		},
 		"ghcr.io/devcontainers/features/python:1": {
 			"installTools": true,
-			"optimize": true,
+			"installJupyterlab": true,
 			"version": "3.8"
 		}
-	},
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -22,32 +18,12 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	// Uncomment the next line to run commands after the container is created.
-	"postCreateCommand": "./install-packages.sh",
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 
 	// Configure tool-specific properties.
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.python",
-				"tamasfe.even-better-toml"
-			]
-		}
-	},
+	// "customizations": {},
 
-	"runArgs": [
-		"--gpus",
-		"all",
-		"--env-file",
-		".devcontainer/.env"
-	],
-
-	"mounts": [
-		{ "source": "/mnt", "target": "/mnt", "type": "bind" }
-	],
-
-	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
-	"remoteUser": "vscode"
-	// "remoteUser": "${localEnv:USER}"
-	// "containerUser": "${localEnv:USER}"
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
 }

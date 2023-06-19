@@ -1,7 +1,10 @@
+# flake8: noqa
+
+__version__ = "0.0.2"
+
+from . import api
 from . import readers
+from . import schemata
+from . import utils
 
-# from . import schemata
-
-from .version import __version__
-
-# None of Datajoint longblobs, external-blobs, attach, filepath, and attribute adapters should be used.
+__all__ = ["api", "readers", "schemata", "utils", "__version__"]

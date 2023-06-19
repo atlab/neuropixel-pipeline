@@ -16,20 +16,28 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "pydantic>=2.0b1",
+    "devtools",
     "datajoint==0.12.9",
-    "numpy",
+    "numpy==1.23", # currently needed to deal with np.float deprecation in datajoint
+    # "polars[numpy,pandas]",
+    "pandas",
+    "h5py",
+    "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-# This also needs pykilosort-requirements.txt to be installed manually (for now), can likely just add them here directly if nothing else
-# kilosort = ["pykilosort @ git+https://github.com/MouseLand/pykilosort"]
-kilosort = ["pykilosort @ git+https://github.com/Cpapa97/pykilosort@atlab"]
-# switch to cupy-cuda110 for CUDA 11.0, also just "cupy" seems to fail because cuda isn't found on the dev environment system at all
-cuda = ["nvidia-cuda-runtime-cu11", "nvidia-cuda-nvcc-cu11"]
+# gpu = []
+# kilosort = [] # this will point to the pykilosort that we use
+# ecephys = ["ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git"]
 
 [tool.setuptools]
 packages = ["neuropixel_pipeline"]
 
 [tool.setuptools.dynamic]
 version = {attr = "neuropixel_pipeline.__version__"}
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
