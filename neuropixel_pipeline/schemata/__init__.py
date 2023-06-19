@@ -18,7 +18,9 @@ class DatajointInsertUtil:
     def run(self):
         self.table.insert1(self.__dict__)
 
-
+# TODO:
+# This will be changed to be able to go straight from a scan key to full CuratedClustering.Unit output (no curation)
+# If curation occurs that can be added after from the CuratedClustering step.
 class BetterHelper(BaseModel):
     # doing this doesn't actually forward the values to the nested dataclass, so they're not actually accessible or tied to the nested class in any way except nominally.
     skip_duplicates: bool = False
