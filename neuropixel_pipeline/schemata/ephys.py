@@ -31,9 +31,19 @@ class Session(dj.Manual):
     animal_id=null: int unsigned # animal id
     session=null: smallint unsigned # original session id
     scan_idx=null: smallint unsigned # scan idx
+    rig='': varchar(60) # recording rig
     timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when this session was inserted
-    recording_rig='': varchar(60)
     """
+
+    @classmethod
+    def add_session(cls, session_meta, error_on_duplicate=True):
+        if not cls & session_meta:
+            cls.insert1(session_meta) # should just hash as the primary key and put the rest as a longblob?
+        elif error_on_duplicate:
+            raise ValueError("Duplicate secondary keys")
+        else:
+            pass
+        
 
 
 @schema
@@ -50,10 +60,11 @@ class SkullReference(dj.Lookup):
 class AcquisitionSoftware(dj.Lookup):
     """Name of software used for recording electrophysiological data."""
 
-    definition = """  # Software used for recording of neuropixels probes
+    definition = """
+    # Software used for recording of neuropixels probes
     acq_software: varchar(24)
     """
-    contents = zip(["LabviewV1", "SpikeGLX", "Open Ephys"])
+    contents = zip(["LabviewV1", "SpikeGLX", "OpenEphys"])
 
 
 @schema
@@ -88,18 +99,6 @@ class InsertionLocation(dj.Manual):
 
 
 @schema
-class EphysFile(dj.Manual):
-    """File directory for ephys sessions"""
-
-    definition = """
-    # File directories for ephys sessions
-    file_path: varchar(255) # file path or directory for an ephys session
-    ---
-    -> AcquisitionSoftware
-    """
-
-
-@schema
 class EphysRecording(dj.Imported):
     """Automated table with electrophysiology recording information for each probe inserted during an experimental session."""
 
@@ -107,8 +106,9 @@ class EphysRecording(dj.Imported):
     # Ephys recording from a probe insertion for a given session.
     -> ProbeInsertion
     ---
-    -> EphysFile
+    -> AcquisitionSoftware
     -> probe.ElectrodeConfig
+    session_path: varchar(255) # file path or directory for an ephys session
     sampling_rate: float # (Hz)
     recording_datetime=null: datetime # datetime of the recording from this probe
     recording_duration=null: float # (seconds) duration of the recording from this probe
@@ -116,8 +116,9 @@ class EphysRecording(dj.Imported):
 
     def make(self, key):
         """Populates table with electrophysiology recording information."""
-        session_dir = Path(key["file_path"])
-        acq_software = (EphysFile & key).fetch1("acq_software")
+        data = (self & key).fetch1()
+        acq_software = data["acq_software"]
+        session_path = data["session_path"]
 
         inserted_probe_serial_number = (ProbeInsertion * probe.Probe & key).fetch1(
             "probe"
@@ -128,7 +129,7 @@ class EphysRecording(dj.Imported):
         # supported_probe_types = probe.ProbeType.fetch("probe_type")
 
         if acq_software == "LabviewV1":
-            labview_meta = labview.LabviewNeuropixelMeta.from_h5(session_dir)
+            labview_meta = labview.LabviewNeuropixelMeta.from_h5(session_path)
             if not str(labview_meta.serial_number) == inserted_probe_serial_number:
                 raise FileNotFoundError(
                     "No Labview data found for probe insertion: {}".format(key)
@@ -676,10 +677,10 @@ class WaveformSet(dj.Imported):
                 spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
                 neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
             elif acq_software == "Open Ephys":
-                session_dir = find_full_path(
+                session_path = find_full_path(
                     get_ephys_root_data_dir(), get_session_directory(key)
                 )
-                openephys_dataset = openephys.OpenEphys(session_dir)
+                openephys_dataset = openephys.OpenEphys(session_path)
                 neuropixels_recording = openephys_dataset.probes[probe_serial_number]
             else:
                 raise NotImplementedError(f"for acq_software == {acq_software}")
