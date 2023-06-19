@@ -9,6 +9,9 @@ DEFAULT_PROBE_TYPE = "neuropixels 1.0 - 3B"
 DEFAULT_PROBE_COMMENT = "Filled using calibration files"
 
 
+def get_session():
+    pass
+
 @validate_call
 def get_probe_serial_numbers(
     probe_calibration_dir: Path = PROBE_CALIBRATION_DIR,

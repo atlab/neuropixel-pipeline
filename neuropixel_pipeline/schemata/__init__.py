@@ -24,10 +24,6 @@ class BetterHelper(BaseModel):
     skip_duplicates: bool = False
 
     @dataclass
-    class ProbeData(DatajointInsertUtil):
-        probes: List[api.metadata.ProbeData]
-
-    @dataclass
     class PreClustering:
         session_key: api.metadata.SessionKey
         insertion_number: int
