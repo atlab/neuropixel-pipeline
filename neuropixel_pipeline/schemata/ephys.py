@@ -4,7 +4,7 @@ import datajoint as dj
 import numpy as np
 
 from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
-from neuropixel_pipeline.api.postclustering import WaveformSetRunner
+from neuropixel_pipeline.api.postclustering import WaveformSetRunner, QualityMetricsRunner
 from . import probe
 from .. import utils
 from ..readers import labview, kilosort
@@ -588,7 +588,10 @@ class CuratedClustering(dj.Imported):
         insert_units = [{**key, **u} for u in units]
         self.Unit.insert(insert_units)
 
-
+# important to note the original source of these quality metrics:
+#   https://allensdk.readthedocs.io/en/latest/
+#   https://github.com/AllenInstitute/ecephys_spike_sorting
+#
 @schema
 class WaveformSet(dj.Imported):
     """A set of spike waveforms for units out of a given CuratedClustering."""
@@ -804,7 +807,7 @@ class QualityMetrics(dj.Imported):
         curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
         # check for manual curation and quality control file
-        kilosort.Kilosort.extract_clustering_info(curation_output_dir)
+        kilosort.Kilosort.extract_clustering_info(curation_output_dir) # this returns variables, but they aren't being used???
 
         metric_fp = curation_output_dir / "metrics.csv"
         rename_dict = {
@@ -815,11 +818,10 @@ class QualityMetrics(dj.Imported):
 
         if not metric_fp.exists():
             print("Constructing Quality Control metrics.csv file")
-            import json
 
-            params = json.loads((ClusteringParamSet & key).fetch1("params"))
-            results = WaveformSetRunner(params).calculate()
-            print(f"WaveformSetRunner results: {results}")
+            params = (ClusteringParamSet & key).fetch1("params")
+            results = QualityMetricsRunner(args=params).calculate()
+            print(f"QualityMetricsRunner results: {results}")
 
         metrics_df = pd.read_csv(metric_fp)
         metrics_df.set_index("cluster_id", inplace=True)
