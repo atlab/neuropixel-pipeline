@@ -449,7 +449,7 @@ class Curation(dj.Manual):
     curation_note='': varchar(2000)
     """
 
-    def create1_from_clustering_task(self, key, curation_note="", skip_duplicates=True):
+    def create1_from_clustering_task(self, key, curation_output_dir, curation_note="", skip_duplicates=True):
         """
         A function to create a new corresponding "Curation" for a particular
         "ClusteringTask"
@@ -464,10 +464,9 @@ class Curation(dj.Manual):
             "task_mode", "clustering_output_dir"
         )
 
-        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(
-            key["file_path"]
-        )
-        # Synthesize curation_id
+        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(curation_output_dir)
+
+        # Synthesize curation_id (why no auto_increment??)
         curation_id = (
             dj.U().aggr(self & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
         )
@@ -514,9 +513,8 @@ class CuratedClustering(dj.Imported):
     def make(self, key):
         """Automated population of Unit information."""
 
-        kilosort_path = (ClusteringTask & key).fetch1("clustering_output_dir")
-        # kilosort_path = (Curation & key).fetch1('curation_output_dir')
-        kilosort_dataset = kilosort.Kilosort(kilosort_path)
+        curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
+        kilosort_dataset = kilosort.Kilosort(curation_output_dir)
         sample_rate = (EphysRecording & key).fetch1("sampling_rate")
 
         sample_rate = kilosort_dataset.data["params"].get("sample_rate", sample_rate)
@@ -547,7 +545,7 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key["file_path"])
+        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(curation_output_dir)
         electrode_config_hash = labview_metadata.electrode_config_hash()
 
         probe_type = (
@@ -625,9 +623,9 @@ class WaveformSet(dj.Imported):
 
     def make(self, key):
         """Populates waveform tables."""
-        kilosort_dir = key["file_path"]
+        curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
-        kilosort_dataset = kilosort.Kilosort(kilosort_dir)
+        kilosort_dataset = kilosort.Kilosort(curation_output_dir)
 
         acq_software, probe_serial_number = (
             EphysRecording * ProbeInsertion & key
@@ -649,7 +647,7 @@ class WaveformSet(dj.Imported):
 
         if is_qc:
             unit_waveforms = np.load(
-                kilosort_dir / "mean_waveforms.npy"
+                curation_output_dir / "mean_waveforms.npy"
             )  # unit x channel x sample
 
             def yield_unit_waveforms():
@@ -802,12 +800,12 @@ class QualityMetrics(dj.Imported):
         """Populates tables with quality metrics data."""
         import pandas as pd
 
-        kilosort_dir = Path((ClusteringTask & key).fetch1("clustering_output_dir"))
+        curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
         # check for manual curation and quality control file
-        kilosort.Kilosort.extract_clustering_info(kilosort_dir)
+        kilosort.Kilosort.extract_clustering_info(curation_output_dir)
 
-        metric_fp = kilosort_dir / "metrics.csv"
+        metric_fp = curation_output_dir / "metrics.csv"
         rename_dict = {
             "isi_viol": "isi_violation",
             "num_viol": "number_violation",
