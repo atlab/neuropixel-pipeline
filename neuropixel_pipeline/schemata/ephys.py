@@ -202,12 +202,13 @@ class LFP(dj.Imported):
 
     def make(self, key):
         """Populates the LFP tables."""
-        acq_software = (EphysRecording * ProbeInsertion & key).fetch1("acq_software")
+        recording_meta = (EphysFile * ProbeInsertion & key).fetch()
+        acq_software = recording_meta["acq_software"]
 
         electrode_keys, lfp = [], []
 
         if acq_software == "LabviewV1":
-            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key["filepath"])
+            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(recording_meta["session_path"])
 
             raise NotImplementedError(
                 "LabviewV1 not implemented yet for LFP population"
@@ -557,13 +558,12 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        ephys_session_dir = Path((EphysFile & key).fetch1("session_path"))
-        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(ephys_session_dir)
-        electrode_config_hash = labview_metadata.electrode_config_hash()
+        electrode_config_hash = (
+            EphysRecording * probe.ElectrodeConfig & key
+        ).fetch1('electrode_config_hash')
 
-        probe_type = (probe.Probe & dict(probe=labview_metadata.serial_number)).fetch1(
-            "probe_type"
-        )
+        serial_number = dj.U('probe') & (ProbeInsertion & key)
+        probe_type = (probe.Probe & serial_number).fetch1('probe_type')
 
         # -- Insert unit, label, peak-chn
         units = []
@@ -699,6 +699,7 @@ class WaveformSet(dj.Imported):
                 neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(
                     key["file_path"]
                 )
+                TODO()
             elif acq_software == "SpikeGLX":
                 spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
                 neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
