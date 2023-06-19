@@ -97,6 +97,18 @@ class InsertionLocation(dj.Manual):
     beta=null:   decimal(5, 2) # (deg) rotation about the shank of the probe [-180, 180] - clockwise is increasing in degree - 0 is the probe-front facing anterior
     """
 
+@schema
+class EphysFile(dj.Manual):
+    """Paths for ephys sessions"""
+    
+    definition = """
+    # Paths for ephys sessions
+    -> ProbeInsertion
+    ---
+    session_path: varchar(255) # file path or directory for an ephys session
+    -> AcquisitionSoftware
+    """
+
 
 @schema
 class EphysRecording(dj.Imported):
@@ -106,9 +118,7 @@ class EphysRecording(dj.Imported):
     # Ephys recording from a probe insertion for a given session.
     -> ProbeInsertion
     ---
-    -> AcquisitionSoftware
     -> probe.ElectrodeConfig
-    session_path: varchar(255) # file path or directory for an ephys session
     sampling_rate: float # (Hz)
     recording_datetime=null: datetime # datetime of the recording from this probe
     recording_duration=null: float # (seconds) duration of the recording from this probe
@@ -116,9 +126,9 @@ class EphysRecording(dj.Imported):
 
     def make(self, key):
         """Populates table with electrophysiology recording information."""
-        data = (self & key).fetch1()
-        acq_software = data["acq_software"]
-        session_path = data["session_path"]
+        ephys_file_data = (EphysFile & key).fetch1()
+        acq_software = ephys_file_data["acq_software"]
+        session_path = ephys_file_data["session_path"]
 
         inserted_probe_serial_number = (ProbeInsertion * probe.Probe & key).fetch1(
             "probe"
