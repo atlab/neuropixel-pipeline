@@ -32,7 +32,7 @@ class Session(dj.Manual):
     session=null: smallint unsigned # original session id
     scan_idx=null: smallint unsigned # scan idx
     timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when this session was inserted
-    recording_station=null: varchar(60)
+    recording_rig='': varchar(60)
     """
 
 
