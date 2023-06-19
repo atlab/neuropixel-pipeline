@@ -545,7 +545,8 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(curation_output_dir)
+        ephys_session_dir = Path((EphysFile & key).fetch1("session_path"))
+        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(ephys_session_dir)
         electrode_config_hash = labview_metadata.electrode_config_hash()
 
         probe_type = (
