@@ -128,10 +128,8 @@ class Kilosort:
         self._data["channel_map"] = self._data["channel_map"].flatten()
 
         # Read the Cluster Groups
-        # yes, both cluster_col_name's currently are KSLabel
-        for cluster_pattern, cluster_col_name in zip(
-            ["cluster_group.*", "cluster_KSLabel.*"], ["KSLabel", "KSLabel"]
-        ):
+        # yes, both cluster_col_name's currently are KSLabel but sometimes it isn't hahaha
+        for cluster_pattern, cluster_col_name in [("cluster_KSLabel.*", "KSLabel"), ("cluster_group.*", "group")]:
             try:
                 cluster_file = next(self._kilosort_dir.glob(cluster_pattern))
             except StopIteration:
