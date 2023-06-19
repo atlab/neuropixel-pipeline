@@ -109,10 +109,8 @@ class PopulateHelper:
 
         def run(self):
             # Autoincrement new session
-            ephys.Session.add_session(self.session_key.model_dump()) ### START HERE: I need to look at the tables and see the effect of inserting a session, and then another session.
-            session_id = ephys.Session.get_session_id(
-                self.session_key.model_dump()
-            ).fetch1("session_id")
+            ephys.Session.insert1(self.session_key.model_dump(), skip_duplicates=self.skip_duplicates)
+            session_id = (ephys.Session & self.session_key.model_dump()).fetch1("session_id")
 
             labview_metadata = labview.LabviewNeuropixelMeta.from_h5(self.session_dir)
 

@@ -32,16 +32,8 @@ class Session(dj.Manual):
     session=null: smallint unsigned # original session id
     scan_idx=null: smallint unsigned # scan idx
     timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when this session was inserted
+    recording_station=null: varchar(60)
     """
-
-    @classmethod
-    def add_session(cls, session_meta, skip_duplicates=True):
-        if not cls & session_meta:
-            cls.insert1(session_meta, skip_duplicates=skip_duplicates)
-
-    @classmethod
-    def get_session_id(cls, session_meta):
-        return cls & session_meta
 
 
 @schema
@@ -114,8 +106,8 @@ class EphysRecording(dj.Imported):
     definition = """
     # Ephys recording from a probe insertion for a given session.
     -> ProbeInsertion
-    -> EphysFile
     ---
+    -> EphysFile
     -> probe.ElectrodeConfig
     sampling_rate: float # (Hz)
     recording_datetime=null: datetime # datetime of the recording from this probe
