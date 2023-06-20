@@ -1,9 +1,12 @@
+import time
+import logging
+
 from pydantic import validate_call
 from pydantic.dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
 from neuropixel_pipeline.api.clustering import ClusteringTaskMode
-
+from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
 from neuropixel_pipeline.readers.labview import LabviewNeuropixelMeta
 
 from . import ACQ_SOFTWARE, DEFAULT_CLUSTERING_METHOD, DEFAULT_CLUSTERING_OUTPUT_RELATIVE
@@ -27,15 +30,35 @@ class AtlabParams:
     clustering_output_directory: Optional[Path] = None
     setup: bool = False
 
+def setup_logging(log_level=logging.DEBUG):
+    import sys
+
+    root = logging.getLogger()
+    root.setLevel(log_level)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(log_level)
+    formatter = logging.Formatter('%(asctime)s: %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
+    return root
+
 
 @validate_call
 def main(args: AtlabParams):
+    setup_logging()
+    start_time = time.time()
+    logging.info("starting neuropixel pipeline")
+
     ### Setup
     if args.setup:
+        logging.info("starting setup section")
         probe.ProbeType.fill_neuropixel_probes()
         probe_setup()
+        logging.info("done with setup section")
 
     ### PreClustering
+    logging.info("starting preclustering section")
     session_meta = dict(**args.scan_key)
     session_meta["rig"] = get_rig(args.scan_key)
     ephys.Session.add_session(session_meta, error_on_duplicate=False)
@@ -70,9 +93,12 @@ def main(args: AtlabParams):
     ephys.EphysRecording.populate()
 
     ephys.LFP.populate()  # This isn't implemented yet
+    
+    logging.info("done with preclustering section")
 
     ### Clustering
-    # This currently only supports the default kilosort parameters, which might be alright
+    logging.info("starting clustering section")
+    # This currently only supports the default kilosort parameters, which might be alright for atlab
     if args.clustering_method == DEFAULT_CLUSTERING_METHOD:
         ephys.ClusteringParamSet.fill(
             params=default_kilosort_parameters(),
@@ -95,15 +121,26 @@ def main(args: AtlabParams):
     task_source_key["task_mode"] = str(args.clustering_task_mode)
     ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
-    ##### TRIGGER KILOSORT HERE IF task_mode = 'trigger'
+    if args.clustering_task_mode is ClusteringTaskMode.TRIGGER:
+        task_runner = ClusteringTaskRunner.model_validate(task_source_key)
+        logging.info("attempting to trigger kilosort clustering")
+        task_runner.trigger_clustering()
+        logging.info("one with kilosort clustering")
 
     ##### Next roadblock is deciding how to handle curation
     ##### Currently it could go Input -> Trigger Kilosort -> Ingest into CuratedClustering.Unit
     ##### with "no curation"
     #####
     ##### but to add curation it would always have to come after kilosort triggering.
-
     raise NotImplementedError("Not implemented to this point yet")
+
+    logging.info("done with clustering section")
+
+    logging.info("starting post-clustering section")
+    logging.info("done with post-clustering section")
+
+    logging.info("done with neuropixel pipeline, elapsed_time: {time.time() - start_time}")
+
 
 
 if __name__ == "__main__":
