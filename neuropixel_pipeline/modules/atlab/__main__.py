@@ -9,7 +9,11 @@ from neuropixel_pipeline.api.clustering import ClusteringTaskMode
 from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
 from neuropixel_pipeline.readers.labview import LabviewNeuropixelMeta
 
-from . import ACQ_SOFTWARE, DEFAULT_CLUSTERING_METHOD, DEFAULT_CLUSTERING_OUTPUT_RELATIVE
+from . import (
+    ACQ_SOFTWARE,
+    DEFAULT_CLUSTERING_METHOD,
+    DEFAULT_CLUSTERING_OUTPUT_RELATIVE,
+)
 from .probe_setup import probe_setup
 from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
@@ -30,6 +34,7 @@ class AtlabParams:
     clustering_output_directory: Optional[Path] = None
     setup: bool = False
 
+
 def setup_logging(log_level=logging.DEBUG):
     import sys
 
@@ -38,7 +43,7 @@ def setup_logging(log_level=logging.DEBUG):
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(log_level)
-    formatter = logging.Formatter('%(asctime)s: %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s: %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     root.addHandler(handler)
     return root
@@ -93,7 +98,7 @@ def main(args: AtlabParams):
     ephys.EphysRecording.populate()
 
     ephys.LFP.populate()  # This isn't implemented yet
-    
+
     logging.info("done with preclustering section")
 
     ### Clustering
@@ -110,7 +115,9 @@ def main(args: AtlabParams):
     paramset_rel = ephys.ClusteringParamSet & args.clustering_method
 
     if args.clustering_output_dir is not None:
-        args.clustering_output_directory = session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
+        args.clustering_output_directory = (
+            session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
+        )
 
     task_source_rel = (ephys.EphysRecording & insertion_key).proj() * (
         ephys.ClusteringParamSet() & paramset_rel
@@ -132,16 +139,16 @@ def main(args: AtlabParams):
     ##### with "no curation"
     #####
     ##### but to add curation it would always have to come after kilosort triggering.
-    raise NotImplementedError("Not implemented to this point yet")
 
+    raise NotImplementedError("Not implemented to this point yet")
     logging.info("done with clustering section")
 
     logging.info("starting post-clustering section")
+
     logging.info("done with post-clustering section")
 
     elapsed_time = round(time.time() - start_time, 2)
     logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
-
 
 
 if __name__ == "__main__":

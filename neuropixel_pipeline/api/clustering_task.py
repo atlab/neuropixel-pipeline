@@ -17,7 +17,7 @@ class ClusteringTaskRunner(BaseModel):
 
     def trigger_clustering(self):
         # Locally or eventually maybe using an HTTP request to a REST server
-        
+
         from kilosort_runner.run import KilosortRunner, KilosortParams
 
         params = KilosortParams.model_validate(self.clustering_params)
