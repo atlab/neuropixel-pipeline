@@ -133,8 +133,12 @@ class AtlabParams:
         #####
         ##### but to add curation it would always have to come after kilosort triggering.
         if self.curation_input.curation_output_dir is None:
-            clustering_source_key = (ephys.Clustering() & task_source_key).proj().fetch1()
-            self.curation_input.curation_output_dir = clustering_source_key["clustering_output_dir"]
+            clustering_source_key = (
+                (ephys.Clustering() & task_source_key).proj().fetch1()
+            )
+            self.curation_input.curation_output_dir = clustering_source_key[
+                "clustering_output_dir"
+            ]
         ephys.Curation.create1_from_clustering_task(
             dict(
                 **clustering_source_key,
@@ -148,11 +152,12 @@ class AtlabParams:
         ephys.WaveformSet.populate()
         ephys.QualityMetrics.populate()
         logging.info("done with post-clustering section")
-    
+
         elapsed_time = round(time.time() - start_time, 2)
         logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
 
 
+@validate_call
 def setup_logging(log_level=logging.DEBUG):
     import sys
 
