@@ -90,7 +90,7 @@ def main(args: AtlabParams):
     task_source_key = task_source_rel.fetch1()
 
     task_source_key["clustering_output_dir"] = args.clustering_output_directory
-    task_source_key["task_mode"] = "load"
+    task_source_key["task_mode"] = str(args.clustering_task_mode)
     ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
 
