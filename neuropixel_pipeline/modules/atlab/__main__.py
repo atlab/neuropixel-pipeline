@@ -14,6 +14,7 @@ from .kilosort_params import default_kilosort_parameters
 from ...api import metadata
 from ...schemata import probe, ephys
 
+
 @dataclass
 class AtlabParams:
     scan_key: ScanKey
@@ -26,6 +27,7 @@ class AtlabParams:
     clustering_output_directory: Optional[Path] = None
     setup: bool = False
 
+
 @validate_call
 def main(args: AtlabParams):
     ### Setup
@@ -35,15 +37,15 @@ def main(args: AtlabParams):
 
     ### PreClustering
     session_meta = dict(**args.scan_key)
-    session_meta['rig'] = get_rig(args.scan_key)
+    session_meta["rig"] = get_rig(args.scan_key)
     ephys.Session.add_session(session_meta, error_on_duplicate=False)
 
     session_path = get_session_path(args.scan_key, base_dir=args.base_dir)
-    INSERTION_NUMBER = 0 # TODO: Insertion number should be auto_increment?
+    INSERTION_NUMBER = 0  # TODO: Insertion number should be auto_increment?
 
     labview_metadata = LabviewNeuropixelMeta.from_h5(session_path)
 
-    session_id = (ephys.Session & session_meta).fetch1('session_id')
+    session_id = (ephys.Session & session_meta).fetch1("session_id")
     insertion_key = dict(session_id=session_id, insertion_number=INSERTION_NUMBER)
 
     ephys.ProbeInsertion.insert1(
@@ -67,7 +69,7 @@ def main(args: AtlabParams):
     )
     ephys.EphysRecording.populate()
 
-    ephys.LFP.populate() # This isn't implemented yet
+    ephys.LFP.populate()  # This isn't implemented yet
 
     ### Clustering
     # This currently only supports the default kilosort parameters, which might be alright
@@ -79,7 +81,7 @@ def main(args: AtlabParams):
             skip_duplicates=True,
         )
 
-    paramset_rel = (ephys.ClusteringParamSet & args.clustering_method)
+    paramset_rel = ephys.ClusteringParamSet & args.clustering_method
 
     if args.clustering_output_dir is not None:
         args.clustering_output_directory = session_path / CLUSTERING_OUTPUT_RELATIVE
@@ -93,7 +95,6 @@ def main(args: AtlabParams):
     task_source_key["task_mode"] = str(args.clustering_task_mode)
     ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
-
     ##### TRIGGER KILOSORT HERE IF task_mode = 'trigger'
 
     ##### Next roadblock is deciding how to handle curation
@@ -102,10 +103,10 @@ def main(args: AtlabParams):
     #####
     ##### but to add curation it would always have to come after kilosort triggering.
 
-
     raise NotImplementedError("Not implemented to this point yet")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     ### TODO: Should have a minion mode that checks for any scans to push through the pipeline.
     ###     Will use the --mode=minion flag.
     main()

@@ -208,7 +208,9 @@ class LFP(dj.Imported):
         electrode_keys, lfp = [], []
 
         if acq_software == "LabviewV1":
-            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(recording_meta["session_path"])
+            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(
+                recording_meta["session_path"]
+            )
 
             raise NotImplementedError(
                 "LabviewV1 not implemented yet for LFP population"
@@ -558,12 +560,12 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        electrode_config_hash = (
-            EphysRecording * probe.ElectrodeConfig & key
-        ).fetch1('electrode_config_hash')
+        electrode_config_hash = (EphysRecording * probe.ElectrodeConfig & key).fetch1(
+            "electrode_config_hash"
+        )
 
-        serial_number = dj.U('probe') & (ProbeInsertion & key)
-        probe_type = (probe.Probe & serial_number).fetch1('probe_type')
+        serial_number = dj.U("probe") & (ProbeInsertion & key)
+        probe_type = (probe.Probe & serial_number).fetch1("probe_type")
 
         # -- Insert unit, label, peak-chn
         units = []

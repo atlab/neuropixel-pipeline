@@ -64,7 +64,10 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
 
     @classmethod
     def from_h5(
-        cls, directory: Path, family: str = "NPElectrophysiology%d.h5", load_config_data=True,
+        cls,
+        directory: Path,
+        family: str = "NPElectrophysiology%d.h5",
+        load_config_data=True,
     ) -> LabviewNeuropixelMeta:
         """
         Uses an h5 family driver if necessary

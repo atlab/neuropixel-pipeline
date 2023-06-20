@@ -3,16 +3,20 @@ from pathlib import Path
 from typing import List, Dict, Any
 import os
 
-from . import PROBE_CALIBRATION_DIR, PROBE_CALIBRATION_SUFFIX, DEFAULT_PROBE_COMMENT, DEFAULT_PROBE_TYPE
+from . import (
+    PROBE_CALIBRATION_DIR,
+    PROBE_CALIBRATION_SUFFIX,
+    DEFAULT_PROBE_COMMENT,
+    DEFAULT_PROBE_TYPE,
+)
+
 
 @validate_call
 def get_probe_serial_numbers(
     probe_calibration_dir: Path = PROBE_CALIBRATION_DIR,
-    probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX
+    probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX,
 ) -> List[int]:
     assert probe_calibration_dir.exists()
-
-    
 
     probe_serial_nums = []
     for p in os.listdir(probe_calibration_dir):
@@ -24,7 +28,9 @@ def get_probe_serial_numbers(
 
 @validate_call
 def probe_setup(
-    probe_calibration_dir: Path = PROBE_CALIBRATION_DIR, probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX, insert=True
+    probe_calibration_dir: Path = PROBE_CALIBRATION_DIR,
+    probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX,
+    insert=True,
 ) -> List[Dict[str, Any]]:
     """Requires datajoint access if insert is True (the default)"""
 

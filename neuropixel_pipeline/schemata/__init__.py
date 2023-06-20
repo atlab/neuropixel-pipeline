@@ -18,6 +18,7 @@ class DatajointInsertUtil:
     def run(self):
         self.table.insert1(self.__dict__)
 
+
 # TODO:
 # This will be changed to be able to go straight from a scan key to full CuratedClustering.Unit output (no curation)
 # If curation occurs that can be added after from the CuratedClustering step.
