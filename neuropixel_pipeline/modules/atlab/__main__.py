@@ -39,7 +39,7 @@ class AtlabParams:
     insertion_location: Optional[metadata.InsertionLocation] = None
     clustering_method: str = DEFAULT_CLUSTERING_METHOD
     clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
-    clustering_output_directory: Optional[Path] = None
+    clustering_output_dir: Optional[Path] = None
     curation_input: CurationInput = CurationInput()
     setup: bool = False
 
@@ -124,7 +124,7 @@ def main(args: AtlabParams):
     paramset_rel = ephys.ClusteringParamSet & args.clustering_method
 
     if args.clustering_output_dir is not None:
-        args.clustering_output_directory = (
+        args.clustering_output_dir = (
             session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
         )
 
@@ -133,7 +133,7 @@ def main(args: AtlabParams):
     ).proj()
     task_source_key = task_source_rel.fetch1()
 
-    task_source_key["clustering_output_dir"] = args.clustering_output_directory
+    task_source_key["clustering_output_dir"] = args.clustering_output_dir
     task_source_key["task_mode"] = str(args.clustering_task_mode)
     ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
@@ -149,14 +149,13 @@ def main(args: AtlabParams):
     ##### with "no curation"
     #####
     ##### but to add curation it would always have to come after kilosort triggering.
-    curation_input = CurationInput.model_validate(args.curation_input)
-    if curation_input.curation_output_dir is None:
-        curation_source_key = (ephys.Clustering() & task_source_key).proj().fetch1()
-        curation_input.curation_output_dir = curation_source_key["curation_output_dir"]
+    if args.curation_input.curation_output_dir is None:
+        clustering_source_key = (ephys.Clustering() & task_source_key).proj().fetch1()
+        args.curation_input.curation_output_dir = clustering_source_key["clustering_output_dir"]
     ephys.Curation.create1_from_clustering_task(
         dict(
-            **curation_source_key,
-            **curation_input.model_dump(),
+            **clustering_source_key,
+            **args.curation_input.model_dump(),
         )
     )
 

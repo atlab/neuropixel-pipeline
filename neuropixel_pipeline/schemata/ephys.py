@@ -441,7 +441,6 @@ class CurationType(dj.Lookup):  # Table definition subject to change
     contents = zip(["no curation"])
 
 
-# TODO: Would 0 mean no curation, or is a different design for the key better
 @schema
 class Curation(dj.Manual):
     """Curation procedure table."""
