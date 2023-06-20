@@ -106,4 +106,6 @@ def main(args: AtlabParams):
     raise NotImplementedError("Not implemented to this point yet")
 
 if __name__ == '__main__':
+    ### TODO: Should have a minion mode that checks for any scans to push through the pipeline.
+    ###     Will use the --mode=minion flag.
     main()

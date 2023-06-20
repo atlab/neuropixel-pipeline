@@ -1,0 +1,86 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: neuropixel-jupyter-gpu
+  labels:
+    app: neuropixel-jupyter-gpu # Reference this in your service
+spec:
+  schedule: "*/5 * * * *" # every 5 minutes
+  concurrencyPolicy: Allow
+  jobTemplate:
+    spec:
+      restartPolicy: OnFailure # minion-gpu.yaml uses Never...
+      hostNetwork: true
+      tolerations:
+        - key: "gpu"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  # - key: gpu_mem_size
+                  #   operator: In
+                  #   value:
+                  #   - 11GB
+                  #   - 12GB
+                  #   - 24GB
+                  #   - 32GB
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - at-gpu7
+      priorityClassName: medium-priority
+      volumes:
+        - name: mnt
+          hostPath:
+            path: /mnt
+      containers:
+        - name: neuropixel-jupyter-gpu
+          image: at-docker.ad.bcm.edu:5000/kilosort4:latest
+          imagePullPolicy: Always # needed because the image tag is not latest
+          volumeMounts:
+            - name: mnt
+              mountPath: /mnt
+          resources:
+            requests: # these requests are guesses
+              cpu: "1"
+              memory: "64Gi"
+            limits:
+              nvidia.com/gpu: "1"
+          env:
+            - name: DJ_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: datajoint-credentials
+                  key: DJ_HOST
+            - name: DJ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: datajoint-credentials
+                  key: DJ_USER
+            - name: DJ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: datajoint-credentials
+                  key: DJ_PASS
+            # - name: GITHUB_USERNAME
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: github-credentials
+            #       key: GITHUB_USERNAME
+            # - name: GITHUB_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: github-credentials
+            #       key: GITHUB_PASSWORD
+          command: ["/bin/bash"]
+          args: ["-c",
+            "mkdir -p /src &&\
+            cd /src &&\
+            git clone https://github.com/atlab/neuropixel-pipeline.git &&\
+            cd neuropixel-pipeline; \
+            conda run --no-capture-output -n kilosort python -m pip install -e . &&\
+            conda run --no-capture-output -n kilosort python -m neuropixel-pipeline.modules.atlab --mode=minion"]
