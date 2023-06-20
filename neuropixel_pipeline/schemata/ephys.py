@@ -438,7 +438,7 @@ class CurationType(dj.Lookup):  # Table definition subject to change
     ---
     """
 
-    contents = zip(["no curation"])
+    contents = zip(["no curation", "phy"])
 
 
 @schema

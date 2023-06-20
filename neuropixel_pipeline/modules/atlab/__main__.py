@@ -36,6 +36,7 @@ class AtlabParams:
     base_dir: Optional[Path] = None
     acq_software: str = ACQ_SOFTWARE
     # Will ephys.InsertionLocation just be inserted into directly from 2pmaster?
+    insertion_number: int
     insertion_location: Optional[metadata.InsertionLocation] = None
     clustering_method: str = DEFAULT_CLUSTERING_METHOD
     clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
@@ -61,12 +62,11 @@ class AtlabParams:
         ephys.Session.add_session(session_meta, error_on_duplicate=False)
 
         session_path = get_session_path(self.scan_key, base_dir=self.base_dir)
-        INSERTION_NUMBER = 0  # TODO: Insertion number should be auto_increment?
 
         labview_metadata = LabviewNeuropixelMeta.from_h5(session_path)
 
         session_id = (ephys.Session & session_meta).fetch1("session_id")
-        insertion_key = dict(session_id=session_id, insertion_number=INSERTION_NUMBER)
+        insertion_key = dict(session_id=session_id, insertion_number=self.insertion_number)
 
         ephys.ProbeInsertion.insert1(
             dict(
