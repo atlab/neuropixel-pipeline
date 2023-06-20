@@ -152,7 +152,8 @@ def main(args: AtlabParams):
     logging.info("done with clustering section")
 
     logging.info("starting post-clustering section")
-
+    ephys.WaveformSet.populate()
+    ephys.QualityMetrics.populate()
     logging.info("done with post-clustering section")
 
     elapsed_time = round(time.time() - start_time, 2)
