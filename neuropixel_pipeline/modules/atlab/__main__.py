@@ -139,7 +139,8 @@ def main(args: AtlabParams):
     logging.info("starting post-clustering section")
     logging.info("done with post-clustering section")
 
-    logging.info("done with neuropixel pipeline, elapsed_time: {time.time() - start_time}")
+    elapsed_time = round(time.time() - start_time, 2)
+    logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
 
 
 
