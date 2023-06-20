@@ -6,7 +6,7 @@ from neuropixel_pipeline.api.clustering import ClusteringTaskMode
 
 from neuropixel_pipeline.readers.labview import LabviewNeuropixelMeta
 
-from . import ACQ_SOFTWARE, CLUSTERING_METHOD, CLUSTERING_OUTPUT_RELATIVE
+from . import ACQ_SOFTWARE, DEFAULT_CLUSTERING_METHOD, DEFAULT_CLUSTERING_OUTPUT_RELATIVE
 from .probe_setup import probe_setup
 from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
@@ -22,7 +22,7 @@ class AtlabParams:
     acq_software: str = ACQ_SOFTWARE
     # Will ephys.InsertionLocation just be inserted into directly from 2pmaster?
     insertion_location: Optional[metadata.InsertionLocation] = None
-    clustering_method: str = CLUSTERING_METHOD
+    clustering_method: str = DEFAULT_CLUSTERING_METHOD
     clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
     clustering_output_directory: Optional[Path] = None
     setup: bool = False
@@ -73,7 +73,7 @@ def main(args: AtlabParams):
 
     ### Clustering
     # This currently only supports the default kilosort parameters, which might be alright
-    if args.clustering_method == CLUSTERING_METHOD:
+    if args.clustering_method == DEFAULT_CLUSTERING_METHOD:
         ephys.ClusteringParamSet.fill(
             params=default_kilosort_parameters(),
             clustering_method="kilosort4",
@@ -84,7 +84,7 @@ def main(args: AtlabParams):
     paramset_rel = ephys.ClusteringParamSet & args.clustering_method
 
     if args.clustering_output_dir is not None:
-        args.clustering_output_directory = session_path / CLUSTERING_OUTPUT_RELATIVE
+        args.clustering_output_directory = session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
 
     task_source_rel = (ephys.EphysRecording & insertion_key).proj() * (
         ephys.ClusteringParamSet() & paramset_rel
