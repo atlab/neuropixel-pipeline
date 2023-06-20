@@ -413,8 +413,6 @@ class Clustering(dj.Imported):
 
     def make(self, key):
         source_key = (ClusteringTask & key).fetch1()
-        task_runner = ClusteringTaskRunner.model_validate(source_key)
-        task_runner.trigger_clustering()  # run kilosort if it's set to trigger
 
         clustering_output_dir = Path(source_key["clustering_output_dir"])
         creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(
