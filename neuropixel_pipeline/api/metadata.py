@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, condecimal
+from typing import Optional
 from typing import List
 from enum import Enum
 import numpy as np
@@ -143,3 +144,28 @@ class ProbeData(BaseModel):
 class SkullReferenceValue(str, Enum):
     BREGMA = "Bregma"
     LAMBDA = "Lambda"
+
+
+class InsertionData(BaseModel):
+    # (um) anterior-posterior; ref is 0; more anterior is more positive
+    ap_location: condecimal(max_digits=6, decimal_places=2)
+
+    # (um) medial axis; ref is 0 ; more right is more positive
+    ml_location: condecimal(max_digits=6, decimal_places=2)
+
+    # (um) manipulator depth relative to surface of the brain (0); more ventral is more
+    # negative
+    depth: condecimal(max_digits=6, decimal_places=2)
+
+    # SkullReference, can be coerced from a str
+    skull_reference: SkullReferenceValue = "Bregma"
+
+    # (deg) - elevation - rotation about the ml-axis [0, 180] - w.r.t the z+ axis
+    theta: Optional[condecimal(max_digits=5, decimal_places=2)] = None
+
+    # (deg) - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis
+    phi: Optional[condecimal(max_digits=5, decimal_places=2)] = None
+
+    # (deg) rotation about the shank of the probe [-180, 180] - clockwise is increasing
+    # in degree - 0 is the probe-front facing anterior
+    beta: Optional[condecimal(max_digits=5, decimal_places=2)] = None

@@ -1,11 +1,7 @@
-from pydantic import BaseModel, validate_call, conint
+from pydantic import BaseModel, validate_call
 from pathlib import Path
 
-
-class ScanKey(BaseModel, from_attributes=True):
-    animal_id: conint(ge=0, le=2_147_483_647)
-    session: conint(ge=0, le=32_767)
-    scan_idx: conint(ge=0, le=32_767)
+from .common import ScanKey
 
 class SessionSearch(BaseModel):
     scan_key: ScanKey
