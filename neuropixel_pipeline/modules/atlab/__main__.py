@@ -17,7 +17,7 @@ from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
 from .kilosort_params import default_kilosort_parameters
 from ...api import metadata
-from ...api.clustering import ClusteringTaskMode
+from ...api.clustering import ClusteringTaskMode, CurationInput
 from ...api.clustering_task import ClusteringTaskRunner
 from ...readers.labview import LabviewNeuropixelMeta
 from ...schemata import probe, ephys
@@ -40,6 +40,7 @@ class AtlabParams:
     clustering_method: str = DEFAULT_CLUSTERING_METHOD
     clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
     clustering_output_directory: Optional[Path] = None
+    curation_input: CurationInput = CurationInput()
     setup: bool = False
 
 
@@ -141,12 +142,25 @@ def main(args: AtlabParams):
         logging.info("attempting to trigger kilosort clustering")
         task_runner.trigger_clustering()
         logging.info("one with kilosort clustering")
+    ephys.Clustering.populate()
 
     ##### Next roadblock is deciding how to handle curation
     ##### Currently it could go Input -> Trigger Kilosort -> Ingest into CuratedClustering.Unit
     ##### with "no curation"
     #####
     ##### but to add curation it would always have to come after kilosort triggering.
+    curation_input = CurationInput.model_validate(args.curation_input)
+    if curation_input.curation_output_dir is None:
+        curation_source_key = (
+            (ephys.Clustering() & task_source_key).proj().fetch1()
+        )
+        curation_input.curation_output_dir = curation_source_key["curation_output_dir"]
+    ephys.Curation.create1_from_clustering_task(
+        dict(
+            **curation_source_key,
+            **curation_input.model_dump(),
+        )
+    )
 
     raise NotImplementedError("Not implemented to this point yet")
     logging.info("done with clustering section")
