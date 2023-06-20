@@ -36,7 +36,7 @@ class EphysParams(BaseModel):
     # ap_band_file: str = Field(description="Location of AP band binary file")
     reorder_lfp_channels: bool = Field(
         default=True,
-        description="Should we fix the ordering of LFP channels (necessary for 3a probes following extract_from_npx modules)",
+        description="Should we fix the ordering of LFP channels",
     )
     cluster_group_file_name: str = Field(default="cluster_group.tsv")
 
