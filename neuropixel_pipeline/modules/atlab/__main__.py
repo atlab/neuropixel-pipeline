@@ -162,7 +162,6 @@ def main(args: AtlabParams):
         )
     )
 
-    raise NotImplementedError("Not implemented to this point yet")
     logging.info("done with clustering section")
 
     logging.info("starting post-clustering section")
@@ -172,6 +171,8 @@ def main(args: AtlabParams):
 
     elapsed_time = round(time.time() - start_time, 2)
     logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
+
+    raise NotImplementedError("Curation mode is not supported yet (no curation is though)")
 
 
 if __name__ == "__main__":
