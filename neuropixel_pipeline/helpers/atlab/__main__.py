@@ -2,13 +2,15 @@ from pydantic import validate_call
 from pydantic.dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
+from neuropixel_pipeline.api.clustering import ClusteringTaskMode
 
 from neuropixel_pipeline.readers.labview import LabviewNeuropixelMeta
 
-from . import ACQ_SOFTWARE
+from . import ACQ_SOFTWARE, CLUSTERING_METHOD, CLUSTERING_OUTPUT_RELATIVE
 from .probe_setup import probe_setup
 from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
+from .kilosort_params import default_kilosort_parameters
 from ...api import metadata
 from ...schemata import probe, ephys
 
@@ -19,6 +21,9 @@ class AtlabParams:
     acq_software: str = ACQ_SOFTWARE
     # Will ephys.InsertionLocation just be inserted into directly from 2pmaster?
     insertion_location: Optional[metadata.InsertionLocation] = None
+    clustering_method: str = CLUSTERING_METHOD
+    clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
+    clustering_output_directory: Optional[Path] = None
     setup: bool = False
 
 @validate_call
@@ -65,33 +70,38 @@ def main(args: AtlabParams):
     ephys.LFP.populate() # This isn't implemented yet
 
     ### Clustering
-    def this_needs_work(): # The contents inside this temp function need to be fixed
-        settings = {
-            "NchanTOT": 385,
-            "fs": 30000,
-            "nt": 61,
-            "Th": 8,
-            "spkTh": 8,
-            "Th_detect": 9,
-            "nwaves": 6,
-            "nskip": 25,
-            "nblocks": 5,
-            "binning_depth": 5,
-            "sig_interp": 20,
-            "probe_name": "neuropixPhase3B1_kilosortChanMap.mat",
-        }
-        settings["nt0min"] = int(20 * settings["nt"] / 61)
-        settings["NT"] = 2 * settings["fs"]
-        settings["n_chan_bin"] = settings["NchanTOT"]
-
-
-        # # lookup table, more commonly used (need a simple interface to insert into this occasionally)
+    # This currently only supports the default kilosort parameters, which might be alright
+    if args.clustering_method == CLUSTERING_METHOD:
         ephys.ClusteringParamSet.fill(
-            params=settings,
+            params=default_kilosort_parameters(),
             clustering_method="kilosort4",
             description="default kilosort4 params",
             skip_duplicates=True,
         )
+
+    paramset_rel = (ephys.ClusteringParamSet & args.clustering_method)
+
+    if args.clustering_output_dir is not None:
+        args.clustering_output_directory = session_path / CLUSTERING_OUTPUT_RELATIVE
+
+    task_source_rel = (ephys.EphysRecording & insertion_key).proj() * (
+        ephys.ClusteringParamSet() & paramset_rel
+    ).proj()
+    task_source_key = task_source_rel.fetch1()
+
+    task_source_key["clustering_output_dir"] = args.clustering_output_directory
+    task_source_key["task_mode"] = "load"
+    ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
+
+
+    ##### TRIGGER KILOSORT HERE IF task_mode = 'trigger'
+
+    ##### Next roadblock is deciding how to handle curation
+    ##### Currently it could go Input -> Trigger Kilosort -> Ingest into CuratedClustering.Unit
+    ##### with "no curation"
+    #####
+    ##### but to add curation it would always have to come after kilosort triggering.
+
 
     raise NotImplementedError("Not implemented to this point yet")
 
