@@ -7,6 +7,8 @@ metadata:
 spec:
   schedule: "*/5 * * * *" # every 5 minutes
   concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 30
+  successfulJobsHistoryLimit: 30
   jobTemplate:
     spec:
       restartPolicy: OnFailure # minion-gpu.yaml uses Never...
