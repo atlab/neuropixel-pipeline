@@ -151,9 +151,7 @@ def main(args: AtlabParams):
     ##### but to add curation it would always have to come after kilosort triggering.
     curation_input = CurationInput.model_validate(args.curation_input)
     if curation_input.curation_output_dir is None:
-        curation_source_key = (
-            (ephys.Clustering() & task_source_key).proj().fetch1()
-        )
+        curation_source_key = (ephys.Clustering() & task_source_key).proj().fetch1()
         curation_input.curation_output_dir = curation_source_key["curation_output_dir"]
     ephys.Curation.create1_from_clustering_task(
         dict(
@@ -172,7 +170,9 @@ def main(args: AtlabParams):
     elapsed_time = round(time.time() - start_time, 2)
     logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
 
-    raise NotImplementedError("Curation mode is not supported yet (no curation is though)")
+    raise NotImplementedError(
+        "Curation mode is not supported yet (no curation is though)"
+    )
 
 
 if __name__ == "__main__":

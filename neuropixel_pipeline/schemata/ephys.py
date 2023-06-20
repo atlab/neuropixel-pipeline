@@ -449,7 +449,7 @@ class Curation(dj.Manual):
     definition = """
     # Manual curation procedure
     -> Clustering
-    curation_id: int
+    curation_id: int auto_increment
     ---
     curation_time: datetime             # time of generation of this set of curated clustering results
     curation_output_dir: varchar(255)   # output directory of the curated results, relative to root data directory
