@@ -5,9 +5,7 @@ from pydantic import validate_call
 from pydantic.dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
-from neuropixel_pipeline.api.clustering import ClusteringTaskMode
-from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
-from neuropixel_pipeline.readers.labview import LabviewNeuropixelMeta
+from enum import Enum
 
 from . import (
     ACQ_SOFTWARE,
@@ -19,7 +17,17 @@ from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
 from .kilosort_params import default_kilosort_parameters
 from ...api import metadata
+from ...api.clustering import ClusteringTaskMode
+from ...api.clustering_task import ClusteringTaskRunner
+from ...readers.labview import LabviewNeuropixelMeta
 from ...schemata import probe, ephys
+
+
+# Related to how to use the pipeline, not yet used
+class PipelineMode(str, Enum):
+    MINION = "minion"
+    NO_CURATION = "no curation"
+    CURATION = "curation"
 
 
 @dataclass
