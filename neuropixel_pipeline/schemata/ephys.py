@@ -190,15 +190,15 @@ class LFP(dj.Imported):
     lfp_mean: longblob         # (uV) mean of LFP across electrodes - shape (time,)
     """
 
-    class Electrode(dj.Part):
-        """Saves local field potential data for each electrode."""
+    # class Electrode(dj.Part):
+    #     """Saves local field potential data for each electrode."""
 
-        definition = """
-        -> master
-        -> probe.ElectrodeConfig.Electrode
-        ---
-        lfp: longblob               # (uV) recorded lfp at this electrode
-        """
+    #     definition = """
+    #     -> master
+    #     -> probe.ElectrodeConfig.Electrode
+    #     ---
+    #     lfp: longblob               # (uV) recorded lfp at this electrode
+    #     """
 
     def make(self, key):
         """Populates the LFP tables."""
