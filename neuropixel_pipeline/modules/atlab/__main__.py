@@ -66,7 +66,9 @@ class AtlabParams(BaseModel):
             labview_metadata = LabviewNeuropixelMeta.from_h5(session_path)
 
             session_id = (ephys.Session & session_meta).fetch1("session_id")
-            insertion_key = dict(session_id=session_id, insertion_number=self.insertion_number)
+            insertion_key = dict(
+                session_id=session_id, insertion_number=self.insertion_number
+            )
 
             ephys.ProbeInsertion.insert1(
                 dict(
@@ -104,20 +106,20 @@ class AtlabParams(BaseModel):
                     skip_duplicates=True,
                 )
 
-            paramset_rel = ephys.ClusteringParamSet & {'clustering_method': self.clustering_method}
-
             if self.clustering_output_dir is not None:
                 self.clustering_output_dir = (
                     session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
                 )
 
-            task_source_rel = (ephys.EphysRecording & insertion_key).proj() * (
-                ephys.ClusteringParamSet() & paramset_rel
-            ).proj()
-            task_source_key = task_source_rel.fetch1()
-
-            task_source_key["clustering_output_dir"] = self.clustering_output_dir
-            task_source_key["task_mode"] = str(self.clustering_task_mode)
+            paramset_idx = (
+                ephys.ClusteringParamSet & {"clustering_method": self.clustering_method}
+            ).fetch1("paramset_idx")
+            task_source_key = dict(
+                **insertion_key,
+                paramset_idx=paramset_idx,
+                clustering_output_dir=self.clustering_output_dir,
+                task_mode=str(self.clustering_task_mode),
+            )
             ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
             if self.clustering_task_mode is ClusteringTaskMode.TRIGGER:
