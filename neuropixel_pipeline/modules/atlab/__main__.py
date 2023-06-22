@@ -135,7 +135,7 @@ class AtlabParams(BaseModel):
                     data_dir=session_path,
                     results_dir=task_source_key['clustering_output_dir'],
                     filename=check_for_correct_bin(session_path),
-                    params=params,
+                    clustering_params=params,
                 )
                 logging.info("attempting to trigger kilosort clustering")
                 task_runner.trigger_clustering()
