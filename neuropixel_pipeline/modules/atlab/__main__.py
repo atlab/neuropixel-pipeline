@@ -57,8 +57,8 @@ class AtlabParams(BaseModel):
         if self.mode is not PipelineMode.CURATION:
             ### PreClustering
             logging.info("starting preclustering section")
-            session_meta = dict(**self.scan_key)
-            session_meta["rig"] = get_rig(self.scan_key)
+            session_meta = self.scan_key.model_dump()
+            session_meta["rig"] = get_rig(self.scan_key.model_dump())
             ephys.Session.add_session(session_meta, error_on_duplicate=False)
 
             session_path = get_session_path(self.scan_key, base_dir=self.base_dir)
@@ -152,7 +152,7 @@ class AtlabParams(BaseModel):
         logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
 
 
-def setup_logging(log_level=logging.DEBUG):
+def setup_logging(log_level=logging.INFO):
     import sys
 
     root = logging.getLogger()
