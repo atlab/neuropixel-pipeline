@@ -37,7 +37,7 @@ class AtlabParams:
     acq_software: str = ACQ_SOFTWARE
     # Will ephys.InsertionLocation just be inserted into directly from 2pmaster?
     insertion_number: int
-    insertion_location: Optional[metadata.InsertionLocation] = None
+    insertion_location: Optional[metadata.InsertionData] = None
     clustering_method: str = DEFAULT_CLUSTERING_METHOD
     clustering_task_mode: ClusteringTaskMode = ClusteringTaskMode.TRIGGER
     clustering_output_dir: Optional[Path] = None
