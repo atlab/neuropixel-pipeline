@@ -197,7 +197,7 @@ class Kilosort:
     @staticmethod
     def extract_clustering_info(cluster_output_dir: Path):
         cluster_output_dir = Path(cluster_output_dir)
-        
+
         creation_time = None
 
         phy_curation_indicators = [

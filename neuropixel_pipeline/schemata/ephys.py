@@ -533,7 +533,9 @@ class Curation(dj.Manual):
         if curation_output_dir is None:
             curation_output_dir = (ClusteringTask & key).fetch1("clustering_output_dir")
 
-        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(curation_output_dir)
+        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(
+            curation_output_dir
+        )
 
         with cls.connection.transaction:
             # Synthesize curation_id, no auto_increment for the same reason as Session

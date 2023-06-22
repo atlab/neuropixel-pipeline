@@ -174,10 +174,6 @@ def main(args: AtlabParams):
     args = AtlabParams.model_validate(args)
     args.run_pipeline()
 
-    raise NotImplementedError(
-        "Curation mode is not supported yet (no curation is though)"
-    )
-
 
 if __name__ == "__main__":
     ### TODO: Should have a minion mode that checks for any scans to push through the pipeline.
