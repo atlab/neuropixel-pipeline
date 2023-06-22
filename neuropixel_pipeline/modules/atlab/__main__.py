@@ -118,7 +118,7 @@ class AtlabParams(BaseModel):
                 **insertion_key,
                 paramset_idx=paramset_idx,
                 clustering_output_dir=self.clustering_output_dir,
-                task_mode=str(self.clustering_task_mode),
+                task_mode=self.clustering_task_mode.value,
             )
             ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
