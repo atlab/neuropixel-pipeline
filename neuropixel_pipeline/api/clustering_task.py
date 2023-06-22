@@ -21,7 +21,7 @@ class ClusteringTaskRunner(BaseModel):
         from kilosort_runner.run import KilosortRunner, KilosortParams
 
         params = KilosortParams.model_validate(self.clustering_params)
-        runner = KilosortRunner.model_validate(
+        runner = KilosortRunner(
             data_dir=self.data_dir,
             results_dir=self.results_dir,
             filename=self.filename,
