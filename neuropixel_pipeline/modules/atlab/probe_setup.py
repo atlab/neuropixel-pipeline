@@ -32,7 +32,8 @@ def probe_setup(
     """Requires datajoint access if insert is True (the default)"""
 
     probe_serial_nums = get_probe_serial_numbers(
-        probe_calibration_dir=probe_calibration_dir
+        probe_calibration_dir=probe_calibration_dir,
+        probe_calibration_suffix=probe_calibration_suffix,
     )
     probes = [
         {
