@@ -1,7 +1,7 @@
 import time
 import logging
 
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 from typing import Optional
 from pathlib import Path
 from enum import Enum
@@ -29,10 +29,9 @@ class PipelineMode(str, Enum):
     CURATION = "curation"
 
 
-@dataclass
-class AtlabParams:
+class AtlabParams(BaseModel):
     mode: PipelineMode = "minion"
-    scan_key: ScanKey = None
+    scan_key: Optional[ScanKey] = None
     base_dir: Optional[Path] = None
     acq_software: str = ACQ_SOFTWARE
     # Will ephys.InsertionLocation just be inserted into directly from 2pmaster?
