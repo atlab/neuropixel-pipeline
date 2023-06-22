@@ -5,7 +5,7 @@ from .path_kind import PathData
 
 
 def get_generic_session_path(scan_key: ScanKey):
-    scan_key = ScanKey.model_validate(scan_key)
+    scan_key = ScanKey.model_validate(scan_key).model_dump()
 
     import datajoint as dj
     experiment = dj.create_virtual_module("experiment", "pipeline_experiment")
