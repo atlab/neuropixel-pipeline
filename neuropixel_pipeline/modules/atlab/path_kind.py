@@ -23,7 +23,7 @@ class PathData(BaseModel):
     path: Path
 
     @computed_field
-    def static(self, v) -> Path:
+    def static(self) -> Path:
         """
         The part of the path that doesn't change
         """
