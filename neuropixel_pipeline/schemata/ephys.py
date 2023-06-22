@@ -3,7 +3,6 @@
 import datajoint as dj
 import numpy as np
 
-from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
 from neuropixel_pipeline.api.postclustering import (
     WaveformSetRunner,
     QualityMetricsRunner,
@@ -439,6 +438,39 @@ class CurationType(dj.Lookup):  # Table definition subject to change
     """
 
     contents = zip(["no curation", "phy"])
+
+@schema
+class CurationTask(dj.Manual):
+    definition = """
+    # Curation that should be ingested
+    -> Clustering
+    -> CurationType
+    curation_output_dir: varchar(255) # output directory of the curated results to be ingested
+    """
+
+    @classmethod
+    def add_curation_task(cls, scan_key: dict, curation_type: str, curation_output_dir: Path):
+        with cls.connection.transaction:
+            clustering_key = (Clustering & (Session & scan_key)).fetch1('KEY')
+            cls.insert1(dict(
+                **clustering_key,
+                curation_type=curation_type,
+                curation_output_dir=curation_output_dir,
+            ))
+
+
+
+@schema
+class CurationTaskFinished(dj.Imported):
+    definition = """
+    # Curation ingestion task finished
+    -> CurationTask
+    ---
+    timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when curated results were inserted
+    """
+
+    def make(self, key):
+        pass
 
 
 @schema
