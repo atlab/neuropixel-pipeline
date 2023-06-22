@@ -142,6 +142,7 @@ class AtlabParams(BaseModel):
                 **self.curation_input.model_dump(),
             ),
         )
+        ephys.CuratedClustering.populate()
 
         logging.info("done with clustering section")
 
