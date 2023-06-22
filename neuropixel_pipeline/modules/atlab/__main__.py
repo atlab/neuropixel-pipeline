@@ -104,7 +104,7 @@ class AtlabParams(BaseModel):
                     skip_duplicates=True,
                 )
 
-            paramset_rel = ephys.ClusteringParamSet & self.clustering_method
+            paramset_rel = ephys.ClusteringParamSet & {'clustering_method': self.clustering_method}
 
             if self.clustering_output_dir is not None:
                 self.clustering_output_dir = (
