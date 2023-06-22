@@ -123,7 +123,20 @@ class AtlabParams(BaseModel):
             ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
             if self.clustering_task_mode is ClusteringTaskMode.TRIGGER:
-                task_runner = ClusteringTaskRunner.model_validate(task_source_key)
+                def check_for_correct_bin(session_dir: Path):
+                    NEUROPIXEL_PREFIX = 'NPElectrophysiology'
+                    for path in session_dir.glob('*bin'):
+                        if NEUROPIXEL_PREFIX in path.stem:
+                            return path
+                    else:
+                        raise IOError(f"No bin with {NEUROPIXEL_PREFIX} in the prefix in directory")
+                params = (ephys.ClusteringParamSet & {'paramset_idx': paramset_idx}).fetch('params').item()
+                task_runner = ClusteringTaskRunner(
+                    data_dir=session_path,
+                    results_dir=task_source_key['clustering_output_dir'],
+                    filename=check_for_correct_bin(session_path),
+                    params=params,
+                )
                 logging.info("attempting to trigger kilosort clustering")
                 task_runner.trigger_clustering()
                 logging.info("one with kilosort clustering")
