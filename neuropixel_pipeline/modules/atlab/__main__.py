@@ -129,18 +129,16 @@ class AtlabParams(BaseModel):
                 logging.info("one with kilosort clustering")
             ephys.Clustering.populate()
 
+        clustering_source_key = (ephys.ClusteringTask() & task_source_key).fetch1("KEY")
         if self.curation_input.curation_output_dir is None:
-            clustering_source_key = (
-                (ephys.Clustering() & task_source_key).proj().fetch1()
-            )
-            self.curation_input.curation_output_dir = clustering_source_key[
-                "clustering_output_dir"
-            ]
+            self.curation_input.curation_output_dir = (
+                ephys.ClusteringTask() & task_source_key
+            ).fetch1("clustering_output_dir")
         ephys.Curation.create1_from_clustering_task(
             dict(
                 **clustering_source_key,
                 **self.curation_input.model_dump(),
-            )
+            ),
         )
 
         logging.info("done with clustering section")

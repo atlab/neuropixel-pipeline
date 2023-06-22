@@ -9,9 +9,10 @@ class PathKind(str, Enum):
     """
     Filepath Kind
     """
-    SESSION = 'session'
-    CLUSTERING = 'clustering'
-    CURATION = 'curation'
+
+    SESSION = "session"
+    CLUSTERING = "clustering"
+    CURATION = "curation"
 
 
 class PathData(BaseModel):
@@ -19,6 +20,7 @@ class PathData(BaseModel):
     Filepath Abstraction
     For at-lab the data may be stored in several places, but all with a common part of the path
     """
+
     kind: PathKind
     path: Path
 
@@ -28,18 +30,18 @@ class PathData(BaseModel):
         The part of the path that doesn't change
         """
         parts = self.path.parts
-        index = parts.index("raw") # raw is specific to atlab
+        index = parts.index("raw")  # raw is specific to atlab
         return Path().joinpath(*parts[index + 1 :])
-    
+
     @staticmethod
     def specific_to_generic(specific_path: Path) -> Path:
         """
         Generates a generic path from a specific path
         """
         parts = Path(specific_path).parts
-        index = parts.index('Mouse')
-        return Path('/raw').joinpath(*parts[index:])
-    
+        index = parts.index("Mouse")
+        return Path("/raw").joinpath(*parts[index:])
+
     @staticmethod
     def from_specific(specific_path: Path, kind: PathKind) -> PathKind:
         """
@@ -52,7 +54,7 @@ class PathData(BaseModel):
         Specify a real location using a base directory
         """
         return Path(base_dir) / self.static
-    
+
     def normalized(self, base_dir: Path) -> Path:
         """
         Handles path kind specific nuances
@@ -67,4 +69,6 @@ class PathData(BaseModel):
         elif self.kind is PathKind.CURATION:
             return specific_path
         else:
-            raise NotImplementedError(f"this is not implemented for this PathKind: {self.kind}")
+            raise NotImplementedError(
+                f"this is not implemented for this PathKind: {self.kind}"
+            )

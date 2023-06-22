@@ -8,6 +8,7 @@ def get_generic_session_path(scan_key: ScanKey):
     scan_key = ScanKey.model_validate(scan_key).model_dump()
 
     import datajoint as dj
+
     experiment = dj.create_virtual_module("experiment", "pipeline_experiment")
     acq = dj.create_virtual_module("acq", "acq")
 
@@ -20,7 +21,9 @@ def get_generic_session_path(scan_key: ScanKey):
 
 
 def get_session_path(scan_key: ScanKey, base_dir: Path = None) -> Path:
-    generic_session_path = PathData(path=get_generic_session_path(scan_key), kind='session')
+    generic_session_path = PathData(
+        path=get_generic_session_path(scan_key), kind="session"
+    )
     if base_dir is not None:
         return generic_session_path.normalized(base_dir)
     return generic_session_path
