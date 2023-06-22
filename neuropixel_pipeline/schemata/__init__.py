@@ -104,7 +104,7 @@ class PopulateHelper:
         insertion_number: int
         session_dir: Path
         acq_software: constr(max_length=24)
-        insertion_location: Optional[api.preclustering.InsertionData] = None
+        insertion_location: Optional[api.metadata.InsertionData] = None
         skip_duplicates: bool = False
 
         def run(self):
