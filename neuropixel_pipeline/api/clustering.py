@@ -13,7 +13,7 @@ class ClusteringTaskMode(str, Enum):
 
 
 class CurationInput(BaseModel):
-    curation_id: Optional[int] = None
+    # curation_id: Optional[int] = None
     curation_time: datetime = datetime.now()
     curation_output_dir: Optional[Path] = None
     curation: str = "no curation"
