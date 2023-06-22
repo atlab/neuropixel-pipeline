@@ -405,6 +405,22 @@ class ClusteringTask(dj.Manual):
     task_mode='load': enum('load', 'trigger')  # 'load': load computed analysis results, 'trigger': trigger computation
     """
 
+    @classmethod
+    def build_key_from_scan(
+        cls, scan_key: dict, insertion_number: int, clustering_method: str, fetch=False
+    ) -> dict:
+        task_key = dict(
+            session_id=(Session & scan_key).fetch1("session_id"),
+            insertion_number=insertion_number,
+            paramset_idx=(
+                ClusteringParamSet & {"clustering_method": clustering_method}
+            ).fetch1("paramset_idx"),
+        )
+        if fetch:
+            return (cls & task_key).fetch()
+        else:
+            return task_key
+
 
 @schema
 class Clustering(dj.Imported):
