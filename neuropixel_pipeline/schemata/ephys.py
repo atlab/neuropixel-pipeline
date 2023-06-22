@@ -41,6 +41,7 @@ class Session(dj.Manual):
     def add_session(cls, session_meta, error_on_duplicate=True):
         if not cls & session_meta:
             # Synthesize session id, auto_increment cannot be used here if it's used later
+            # Additionally this does make it more difficult to accidentally add two of the same session
             session_id = (
                 dj.U().aggr(cls & session_meta, n="ifnull(max(curation_id)+1,1)").fetch1("n")
             )
@@ -489,7 +490,7 @@ class Curation(dj.Manual):
     definition = """
     # Manual curation procedure
     -> Clustering
-    curation_id: int auto_increment
+    curation_id: int
     ---
     curation_time: datetime             # time of generation of this set of curated clustering results
     curation_output_dir: varchar(255)   # output directory of the curated results, relative to root data directory
@@ -514,9 +515,15 @@ class Curation(dj.Manual):
 
         creation_time, _, _ = kilosort.extract_clustering_info(curation_output_dir)
 
+        # Synthesize curation_id, no auto_increment for the same reason as Session
+        curation_id = (
+            dj.U().aggr(self & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+        )
+
         self.insert1(
             {
                 **key,
+                "curation_id": curation_id,
                 "curation_time": creation_time,
                 "curation_output_dir": output_dir,
                 "curation_note": curation_note,
