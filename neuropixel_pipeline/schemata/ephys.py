@@ -439,6 +439,7 @@ class CurationType(dj.Lookup):  # Table definition subject to change
 
     contents = zip(["no curation", "phy"])
 
+
 @schema
 class CurationTask(dj.Manual):
     definition = """
@@ -449,15 +450,18 @@ class CurationTask(dj.Manual):
     """
 
     @classmethod
-    def add_curation_task(cls, scan_key: dict, curation_type: str, curation_output_dir: Path):
+    def add_curation_task(
+        cls, scan_key: dict, curation_type: str, curation_output_dir: Path
+    ):
         with cls.connection.transaction:
-            clustering_key = (Clustering & (Session & scan_key)).fetch1('KEY')
-            cls.insert1(dict(
-                **clustering_key,
-                curation=curation_type,
-                curation_output_dir=curation_output_dir,
-            ))
-
+            clustering_key = (Clustering & (Session & scan_key)).fetch1("KEY")
+            cls.insert1(
+                dict(
+                    **clustering_key,
+                    curation=curation_type,
+                    curation_output_dir=curation_output_dir,
+                )
+            )
 
 
 @schema

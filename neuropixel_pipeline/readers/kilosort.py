@@ -29,8 +29,8 @@ class Kilosort:
     _kilosort_additional_files = [
         "spike_times_sec.npy",
         "spike_times_sec_adj.npy",
-        "cluster_groups.tsv", # populated when there is curation
-        "cluster_KSLabel.tsv", # usually present, for no curation
+        "cluster_groups.tsv",  # populated when there is curation
+        "cluster_KSLabel.tsv",  # usually present, for no curation
         # These were removed from the core files for kilosort4
         "pc_features.npy",
         "pc_feature_ind.npy",
