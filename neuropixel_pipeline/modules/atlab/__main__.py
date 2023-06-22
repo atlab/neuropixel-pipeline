@@ -130,12 +130,12 @@ class AtlabParams(BaseModel):
                             return path
                     else:
                         raise IOError(f"No bin with {NEUROPIXEL_PREFIX} in the prefix in directory")
-                params = (ephys.ClusteringParamSet & {'paramset_idx': paramset_idx}).fetch('params').item()
+                clustering_params = (ephys.ClusteringParamSet & {'paramset_idx': paramset_idx}).fetch('params').item()
                 task_runner = ClusteringTaskRunner(
                     data_dir=session_path,
                     results_dir=task_source_key['clustering_output_dir'],
                     filename=check_for_correct_bin(session_path),
-                    params=params,
+                    clustering_params=clustering_params,
                 )
                 logging.info("attempting to trigger kilosort clustering")
                 task_runner.trigger_clustering()
