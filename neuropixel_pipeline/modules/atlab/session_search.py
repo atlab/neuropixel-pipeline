@@ -31,7 +31,8 @@ class SessionSearch(BaseModel):
 
 
 @validate_call
-def get_session_path(scan_key: ScanKey, base_dir: Path = None) -> Path:
+def get_session_path(scan_key: dict, base_dir: Path = None) -> Path:
+    scan_key = ScanKey.model_validate(scan_key)
     generic_session_path = SessionSearch(scan_key=scan_key).get_generic_session_path()
     if base_dir is not None:
         return SessionSearch.normalize_session_path(generic_session_path, base_dir)
