@@ -89,7 +89,7 @@ class AtlabParams(BaseModel):
             )
             ephys.EphysRecording.populate()
 
-            ephys.LFP.populate()  # This isn't implemented yet
+            # ephys.LFP.populate()  # This isn't implemented yet
 
             logging.info("done with preclustering section")
 
