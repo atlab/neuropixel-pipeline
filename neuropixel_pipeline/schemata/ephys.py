@@ -28,7 +28,7 @@ class Session(dj.Manual):
 
     definition = """
     # Session: table connection
-    session_id : int auto_increment # Session primary key hash
+    session_id : int # Session primary key hash
     ---
     animal_id=null: int unsigned # animal id
     session=null: smallint unsigned # original session id
@@ -40,6 +40,11 @@ class Session(dj.Manual):
     @classmethod
     def add_session(cls, session_meta, error_on_duplicate=True):
         if not cls & session_meta:
+            # Synthesize session id, auto_increment cannot be used here if it's used later
+            session_id = (
+                dj.U().aggr(cls & session_meta, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+            )
+            session_meta['session_id'] = session_id
             cls.insert1(
                 session_meta
             )  # should just hash as the primary key and put the rest as a longblob?
