@@ -1,6 +1,6 @@
 import logging
-import pathlib
 import re
+from pathlib import Path
 from datetime import datetime
 from os import path
 
@@ -41,7 +41,7 @@ class Kilosort:
     kilosort_files = _kilosort_core_files + _kilosort_additional_files
 
     def __init__(self, kilosort_dir):
-        self._kilosort_dir = pathlib.Path(kilosort_dir)
+        self._kilosort_dir = Path(kilosort_dir)
         self._files = {}
         self._data = None
         self._clusters = None
@@ -195,7 +195,9 @@ class Kilosort:
         self._data["spike_sites"] = self.data["channel_map"][spike_site_ind]
 
     @staticmethod
-    def extract_clustering_info(cluster_output_dir):
+    def extract_clustering_info(cluster_output_dir: Path):
+        cluster_output_dir = Path(cluster_output_dir)
+        
         creation_time = None
 
         phy_curation_indicators = [
