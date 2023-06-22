@@ -1,4 +1,3 @@
-from pydantic import validate_call
 from pathlib import Path
 from typing import List, Dict, Any
 import os
@@ -11,7 +10,6 @@ from . import (
 )
 
 
-@validate_call
 def get_probe_serial_numbers(
     probe_calibration_dir: Path = PROBE_CALIBRATION_DIR,
     probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX,
@@ -26,7 +24,6 @@ def get_probe_serial_numbers(
     return probe_serial_nums
 
 
-@validate_call
 def probe_setup(
     probe_calibration_dir: Path = PROBE_CALIBRATION_DIR,
     probe_calibration_suffix: str = PROBE_CALIBRATION_SUFFIX,

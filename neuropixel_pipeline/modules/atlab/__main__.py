@@ -1,7 +1,6 @@
 import time
 import logging
 
-from pydantic import validate_call
 from pydantic.dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
@@ -154,7 +153,6 @@ class AtlabParams:
         logging.info(f"done with neuropixel pipeline, elapsed_time: {elapsed_time}")
 
 
-@validate_call
 def setup_logging(log_level=logging.DEBUG):
     import sys
 
@@ -169,7 +167,6 @@ def setup_logging(log_level=logging.DEBUG):
     return root
 
 
-@validate_call
 def main(args: AtlabParams):
     setup_logging()
 

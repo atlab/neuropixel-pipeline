@@ -1,9 +1,7 @@
-from pydantic import validate_call
 
 from .common import ScanKey
 
 
-@validate_call
 def get_rig(scan_key: ScanKey):
     import datajoint as dj
 
