@@ -30,7 +30,7 @@ class PipelineMode(str, Enum):
 
 
 class AtlabParams(BaseModel):
-    mode: PipelineMode = "minion"
+    mode: PipelineMode = "no curation"
     scan_key: Optional[ScanKey] = None
     base_dir: Optional[Path] = None
     acq_software: str = ACQ_SOFTWARE
@@ -169,6 +169,7 @@ def setup_logging(log_level=logging.DEBUG):
 def main(args: AtlabParams):
     setup_logging()
 
+    args = AtlabParams.model_validate(args)
     args.run_pipeline()
 
     raise NotImplementedError(
