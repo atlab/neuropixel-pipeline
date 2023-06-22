@@ -44,7 +44,7 @@ class Session(dj.Manual):
             # Additionally this does make it more difficult to accidentally add two of the same session
             session_id = (
                 dj.U()
-                .aggr(cls & session_meta, n="ifnull(max(curation_id)+1,1)")
+                .aggr(cls & session_meta, n="ifnull(max(session_id)+1,1)")
                 .fetch1("n")
             )
             session_meta["session_id"] = session_id
@@ -500,8 +500,9 @@ class Curation(dj.Manual):
     curation_note='': varchar(2000)
     """
 
+    @classmethod
     def create1_from_clustering_task(
-        self, key, curation_output_dir, curation_note="", skip_duplicates=True
+        cls, key, curation_output_dir=None, curation_note="", skip_duplicates=True
     ):
         """
         A function to create a new corresponding "Curation" for a particular
@@ -513,25 +514,27 @@ class Curation(dj.Manual):
                 f" for: {key}; do `Clustering.populate(key)`"
             )
 
-        output_dir = (ClusteringTask & key).fetch1("clustering_output_dir")
+        if curation_output_dir is None:
+            curation_output_dir = (ClusteringTask & key).fetch1("clustering_output_dir")
 
         creation_time, _, _ = kilosort.extract_clustering_info(curation_output_dir)
 
-        # Synthesize curation_id, no auto_increment for the same reason as Session
-        curation_id = (
-            dj.U().aggr(self & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
-        )
+        with cls.connection.transaction:
+            # Synthesize curation_id, no auto_increment for the same reason as Session
+            curation_id = (
+                dj.U().aggr(cls & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+            )
 
-        self.insert1(
-            {
-                **key,
-                "curation_id": curation_id,
-                "curation_time": creation_time,
-                "curation_output_dir": output_dir,
-                "curation_note": curation_note,
-            },
-            skip_duplicates=skip_duplicates,
-        )
+            cls.insert1(
+                {
+                    **key,
+                    "curation_id": curation_id,
+                    "curation_time": creation_time,
+                    "curation_output_dir": curation_output_dir,
+                    "curation_note": curation_note,
+                },
+                skip_duplicates=skip_duplicates,
+            )
 
 
 # TODO: Remove longblob types, replace with external-attach (or some form of this)
