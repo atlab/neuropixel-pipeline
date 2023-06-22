@@ -106,7 +106,7 @@ class AtlabParams(BaseModel):
                     skip_duplicates=True,
                 )
 
-            if self.clustering_output_dir is not None:
+            if self.clustering_output_dir is None:
                 self.clustering_output_dir = (
                     session_path / DEFAULT_CLUSTERING_OUTPUT_RELATIVE
                 )
