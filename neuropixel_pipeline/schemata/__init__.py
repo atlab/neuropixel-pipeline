@@ -33,7 +33,7 @@ class BetterHelper(BaseModel):
         insertion_number: int
         session_dir: Path
         acq_software: constr(max_length=24)
-        insertion_location: Optional[api.preclustering.InsertionData] = None
+        insertion_location: Optional[api.metadata.InsertionData] = None
 
     @dataclass
     class Clustering:
