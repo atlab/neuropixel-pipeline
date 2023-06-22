@@ -25,7 +25,7 @@ from ...schemata import probe, ephys
 # Related to how to use the pipeline, not yet used
 class PipelineMode(str, Enum):
     MINION = "minion"
-    NO_CURATION = "no curation" # TODO: For non-minion mode all populates should be restricted to just the keys related to the current scan_key, otherwise no populate restriction is used
+    NO_CURATION = "no curation"  # TODO: For non-minion mode all populates should be restricted to just the keys related to the current scan_key, otherwise no populate restriction is used
     CURATION = "curation"
 
 

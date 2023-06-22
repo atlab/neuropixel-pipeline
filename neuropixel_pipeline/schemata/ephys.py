@@ -43,9 +43,11 @@ class Session(dj.Manual):
             # Synthesize session id, auto_increment cannot be used here if it's used later
             # Additionally this does make it more difficult to accidentally add two of the same session
             session_id = (
-                dj.U().aggr(cls & session_meta, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+                dj.U()
+                .aggr(cls & session_meta, n="ifnull(max(curation_id)+1,1)")
+                .fetch1("n")
             )
-            session_meta['session_id'] = session_id
+            session_meta["session_id"] = session_id
             cls.insert1(
                 session_meta
             )  # should just hash as the primary key and put the rest as a longblob?
