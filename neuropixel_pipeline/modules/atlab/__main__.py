@@ -16,8 +16,8 @@ from .session_search import ScanKey, get_session_path
 from .rig_search import get_rig
 from .kilosort_params import default_kilosort_parameters
 from ...api import metadata
-from ...api.clustering import ClusteringTaskMode, CurationInput
-from ...api.clustering_task import ClusteringTaskRunner
+from ...api.clustering import CurationInput
+from ...api.clustering_task import ClusteringTaskMode, ClusteringTaskRunner
 from ...readers.labview import LabviewNeuropixelMeta
 from ...schemata import probe, ephys
 
