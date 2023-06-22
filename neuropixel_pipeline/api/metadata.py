@@ -124,23 +124,6 @@ class NeuropixelConfig(BaseModel):
         ]
 
 
-class SessionKey(BaseModel):
-    animal_id: int
-    session: int
-    scan_idx: int = None
-
-
-class AcquisitionSoftware(BaseModel):
-    acq_software: constr(max_length=24)
-
-
-class ProbeData(BaseModel):
-    # unique indentifier for this model of probe, serial number
-    probe: constr(max_length=32)
-    probe_type: constr(max_length=32)
-    probe_comment: constr(max_length=1000) = None
-
-
 class SkullReferenceValue(str, Enum):
     BREGMA = "Bregma"
     LAMBDA = "Lambda"

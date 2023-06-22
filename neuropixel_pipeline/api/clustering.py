@@ -4,12 +4,6 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
-from enum import Enum
-
-
-class ClusteringTaskMode(str, Enum):
-    LOAD = "load"
-    TRIGGER = "trigger"
 
 
 class CurationInput(BaseModel):

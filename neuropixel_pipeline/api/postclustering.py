@@ -10,7 +10,6 @@ from .ecephys_common import (
 from ecephys_spike_sorting.modules import quality_metrics, mean_waveforms
 
 # i.e. Waveforms and QualityMetrics
-
 # runs ecephys_spike_sorting to produce the waveform analysis and quality metrics files
 
 
