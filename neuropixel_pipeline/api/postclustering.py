@@ -1,46 +1,119 @@
 from __future__ import annotations
 
+from pathlib import Path
 from pydantic import BaseModel
-from .ecephys_common import (
-    EphysParams,
-    Directories,
-    WaveformMetricsFile,
-    ClusterMetricsFile,
-)
-from ecephys_spike_sorting.modules import quality_metrics, mean_waveforms
+from pydantic.dataclasses import dataclass
+from typing import Any
+import numpy as np
+import os
 
 # i.e. Waveforms and QualityMetrics
 # runs ecephys_spike_sorting to produce the waveform analysis and quality metrics files
 
 
-class EcephysSpikeSorting(BaseModel):
-    # input_json: str # likely don't want to rely on input json here
-    args: dict
-
-
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/_schemas.py
-class WaveformSetRunner(EcephysSpikeSorting):
-    # mean_waveform_params = Nested(MeanWaveformParams)
-    waveform_metrics: WaveformMetricsFile
-    cluster_metrics: ClusterMetricsFile
-    ephys_params: EphysParams
-    directories: Directories
+class WaveformSetRunner(BaseModel):
+    sample_rate: float = 30000.0
+    num_channels: int = 384
+    bit_volts: float
+    params: dict = {
+        "samples_per_spike": 82,
+        "pre_samples": 20,
+        "num_epochs": 4,
+        "spikes_per_epoch": 5,
+    }
 
-    def calculate(self):
-        import ecephys_spike_sorting.modules.mean_waveforms.__main__  # noqa: F401
+    @dataclass
+    class Output:
+        data: Any
+        spike_counts: Any
+        coords: Any
+        labesl: Any
 
-        return mean_waveforms.__main__.calculate_mean_waveforms(self.args)
+    def calculate(self, data_dir: Path, bin_name: Path):
+        from ecephys_spike_sorting.modules.mean_waveforms.extract_waveforms import (
+            extract_waveforms,
+        )
+        import ecephys_spike_sorting.common.utils as utils
+
+        data_dir = Path(data_dir)
+        rawData = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
+        data = np.reshape(
+            rawData, (int(rawData.size / self.num_channels), self.num_channels)
+        )
+
+        (
+            spike_times,
+            spike_clusters,
+            amplitudes,
+            templates,
+            channel_map,
+            cluster_ids,
+            cluster_quality,
+        ) = utils.load_kilosort_data(
+            data_dir, self.sample_rate, convert_to_seconds=False
+        )
+
+        return WaveformSetRunner.Output(
+            *extract_waveforms(
+                data,
+                spike_times,
+                spike_clusters,
+                cluster_ids,
+                cluster_quality,
+                self.bit_volts,
+                self.sample_rate,
+                self.params,
+            )
+        )
 
 
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
-class QualityMetricsRunner(EcephysSpikeSorting):
-    # quality_metrics_params = Nested(QualityMetricsParams)
-    ephys_params: EphysParams
-    directories: Directories
-    waveform_metrics: WaveformMetricsFile
-    cluster_metrics: ClusterMetricsFile
+class QualityMetricsRunner(BaseModel):
+    sample_rate: float = 30000.0
+    num_channels: int = 384
+    params: dict = {
+        "samples_per_spike": 82,
+        "pre_samples": 20,
+        "snr_spike_count": 500,
+        "isi_threshold": 0.015,
+    }
 
-    def calculate(self):
-        import ecephys_spike_sorting.modules.quality_metrics.__main__  # noqa: F401
+    @dataclass
+    class Output:
+        metrics: Any
 
-        return quality_metrics.__main__.calculate_quality_metrics(self.args)
+    def calculate(self, data_dir: Path, bin_name: Path):
+        from ecephys_spike_sorting.modules.quality_metrics.metrics import (
+            calculate_metrics,
+        )
+        import ecephys_spike_sorting.common.utils as utils
+
+        data_dir = Path(data_dir)
+        rawData = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
+        data = np.reshape(
+            rawData, (int(rawData.size / self.num_channels), self.num_channels)
+        )
+
+        (
+            spike_times,
+            spike_clusters,
+            amplitudes,
+            templates,
+            channel_map,
+            cluster_ids,
+            cluster_quality,
+        ) = utils.load_kilosort_data(
+            data_dir, self.sample_rate, convert_to_seconds=False
+        )
+
+        return QualityMetricsRunner.Output(
+            calculate_metrics(
+                data,
+                spike_times,
+                spike_clusters,
+                amplitudes,
+                self.sample_rate,
+                self.params,
+            )
+        )
