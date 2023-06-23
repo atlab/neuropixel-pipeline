@@ -65,5 +65,5 @@ def check_for_first_bin_with_prefix(session_dir: Path, prefix: str):
             return path
     else:
         raise IOError(
-            f"No bin with {prefix} in the prefix in directory"
+            f"No bin with {prefix} in the prefix in directory: {session_dir}"
         )
