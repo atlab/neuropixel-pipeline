@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, validate_call
 from pydantic.dataclasses import dataclass
 from typing import Any
 import numpy as np
@@ -9,6 +9,23 @@ import os
 
 # i.e. Waveforms and QualityMetrics
 # runs ecephys_spike_sorting to produce the waveform analysis and quality metrics files
+
+
+@validate_call
+def extract_data_from_bin(
+    bin_file: Path, num_channels: int, has_sync_channel=False
+) -> np.ndarray:
+    bin_file = Path(bin_file)
+    raw_data = np.memmap(bin_file, dtype="int16", mode="r")
+    if not has_sync_channel:
+        data = np.reshape(raw_data, (int(raw_data.size / num_channels), num_channels))
+    else:
+        total_channels = num_channels + 1
+        data = np.reshape(
+            raw_data, (int(raw_data.size / total_channels), total_channels)
+        )
+        data = data[:, 0:num_channels]
+    return data
 
 
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/_schemas.py
@@ -30,24 +47,21 @@ class WaveformSetRunner(BaseModel):
         coords: Any
         labesl: Any
 
-    def calculate(self, data_dir: Path, bin_name: Path, has_sync_channel=False):
+    def calculate(
+        self, bin_file: Path, clustering_output_dir: Path, has_sync_channel=False
+    ):
         from ecephys_spike_sorting.modules.mean_waveforms.extract_waveforms import (
             extract_waveforms,
         )
         import ecephys_spike_sorting.common.utils as utils
 
-        data_dir = Path(data_dir)
-        raw_data = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
-        if not has_sync_channel:
-            data = np.reshape(
-                raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
-            )
-        else:
-            total_channels = self.num_channels + 1
-            data = np.reshape(
-                raw_data, (int(raw_data.size / total_channels), total_channels)
-            )
-            data = data[:, 0:self.num_channels]
+        bin_file = Path(bin_file)
+        clustering_output_dir = Path(clustering_output_dir)
+        data = extract_data_from_bin(
+            bin_file=bin_file,
+            num_channels=self.num_channels,
+            has_sync_channel=has_sync_channel,
+        )
 
         (
             spike_times,
@@ -58,7 +72,7 @@ class WaveformSetRunner(BaseModel):
             cluster_ids,
             cluster_quality,
         ) = utils.load_kilosort_data(
-            data_dir, self.sample_rate, convert_to_seconds=False
+            clustering_output_dir, self.sample_rate, convert_to_seconds=False
         )
 
         return WaveformSetRunner.Output(
@@ -90,24 +104,21 @@ class QualityMetricsRunner(BaseModel):
     class Output:
         metrics: Any
 
-    def calculate(self, data_dir: Path, bin_name: Path, has_sync_channel=False):
+    def calculate(
+        self, bin_file: Path, clustering_output_dir: Path, has_sync_channel=False
+    ):
         from ecephys_spike_sorting.modules.quality_metrics.metrics import (
             calculate_metrics,
         )
         import ecephys_spike_sorting.common.utils as utils
 
-        data_dir = Path(data_dir)
-        raw_data = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
-        if not has_sync_channel:
-            data = np.reshape(
-                raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
-            )
-        else:
-            total_channels = self.num_channels + 1
-            data = np.reshape(
-                raw_data, (int(raw_data.size / total_channels), total_channels)
-            )
-            data = data[:, 0:self.num_channels]
+        bin_file = Path(bin_file)
+        clustering_output_dir = Path(clustering_output_dir)
+        data = extract_data_from_bin(
+            bin_file=bin_file,
+            num_channels=self.num_channels,
+            has_sync_channel=has_sync_channel,
+        )
 
         (
             spike_times,
@@ -118,7 +129,7 @@ class QualityMetricsRunner(BaseModel):
             cluster_ids,
             cluster_quality,
         ) = utils.load_kilosort_data(
-            data_dir, self.sample_rate, convert_to_seconds=False
+            clustering_output_dir, self.sample_rate, convert_to_seconds=False
         )
 
         return QualityMetricsRunner.Output(

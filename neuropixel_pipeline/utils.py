@@ -59,11 +59,10 @@ def dict_to_uuid(key: dict):
         hashed.update(str(v).encode())
     return uuid.UUID(hex=hashed.hexdigest())
 
+
 def check_for_first_bin_with_prefix(session_dir: Path, prefix: str):
     for path in session_dir.glob("*bin"):
         if prefix in path.stem:
             return path
     else:
-        raise IOError(
-            f"No bin with {prefix} in the prefix in directory: {session_dir}"
-        )
+        raise IOError(f"No bin with {prefix} in the prefix in directory: {session_dir}")

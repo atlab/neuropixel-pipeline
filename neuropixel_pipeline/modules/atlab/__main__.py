@@ -133,7 +133,9 @@ class AtlabParams(BaseModel):
                 task_runner = ClusteringTaskRunner(
                     data_dir=session_path,
                     results_dir=task_source_key["clustering_output_dir"],
-                    filename=check_for_first_bin_with_prefix(session_path, prefix=NEUROPIXEL_PREFIX),
+                    filename=check_for_first_bin_with_prefix(
+                        session_path, prefix=NEUROPIXEL_PREFIX
+                    ),
                     clustering_params=clustering_params,
                 )
                 logging.info("attempting to trigger kilosort clustering")
