@@ -37,9 +37,9 @@ class WaveformSetRunner(BaseModel):
         import ecephys_spike_sorting.common.utils as utils
 
         data_dir = Path(data_dir)
-        rawData = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
+        raw_data = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
         data = np.reshape(
-            rawData, (int(rawData.size / self.num_channels), self.num_channels)
+            raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
         )
 
         (
@@ -90,9 +90,9 @@ class QualityMetricsRunner(BaseModel):
         import ecephys_spike_sorting.common.utils as utils
 
         data_dir = Path(data_dir)
-        rawData = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
+        raw_data = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
         data = np.reshape(
-            rawData, (int(rawData.size / self.num_channels), self.num_channels)
+            raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
         )
 
         (
