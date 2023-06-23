@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..readers.kilosort import Kilosort
 
+
 class ClusteringTaskMode(str, Enum):
     LOAD = "load"
     TRIGGER = "trigger"
@@ -29,15 +30,18 @@ class ClusteringTaskRunner(BaseModel):
                 params=params,
             )
             runner.run_kilosort()
-        
+
         if check_for_existing_results:
             try:
                 Kilosort(self.results_dir)
-                print(f"kilosort results already exist in this directory: {self.results_dir}")
-                print("skipping triggering kilosort because `check_for_existing_results` is set to True")
+                print(
+                    f"kilosort results already exist in this directory: {self.results_dir}"
+                )
+                print(
+                    "skipping triggering kilosort because `check_for_existing_results` is set to True"
+                )
             except FileNotFoundError:
                 print(f"kilosort results do not exist yet, triggering kilosort")
                 run_kilosort(self)
         else:
             run_kilosort(self)
-

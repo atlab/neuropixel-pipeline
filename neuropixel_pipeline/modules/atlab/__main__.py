@@ -123,17 +123,25 @@ class AtlabParams(BaseModel):
             ephys.ClusteringTask.insert1(task_source_key, skip_duplicates=True)
 
             if self.clustering_task_mode is ClusteringTaskMode.TRIGGER:
+
                 def check_for_correct_bin(session_dir: Path):
-                    NEUROPIXEL_PREFIX = 'NPElectrophysiology'
-                    for path in session_dir.glob('*bin'):
+                    NEUROPIXEL_PREFIX = "NPElectrophysiology"
+                    for path in session_dir.glob("*bin"):
                         if NEUROPIXEL_PREFIX in path.stem:
                             return path
                     else:
-                        raise IOError(f"No bin with {NEUROPIXEL_PREFIX} in the prefix in directory")
-                clustering_params = (ephys.ClusteringParamSet & {'paramset_idx': paramset_idx}).fetch('params').item()
+                        raise IOError(
+                            f"No bin with {NEUROPIXEL_PREFIX} in the prefix in directory"
+                        )
+
+                clustering_params = (
+                    (ephys.ClusteringParamSet & {"paramset_idx": paramset_idx})
+                    .fetch("params")
+                    .item()
+                )
                 task_runner = ClusteringTaskRunner(
                     data_dir=session_path,
-                    results_dir=task_source_key['clustering_output_dir'],
+                    results_dir=task_source_key["clustering_output_dir"],
                     filename=check_for_correct_bin(session_path),
                     clustering_params=clustering_params,
                 )
