@@ -78,15 +78,18 @@ class WaveformSetRunner(BaseModel):
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
 
+        # TODO: calculate_mean_waveforms
+        # might want to use calculate_mean_waveforms because that produces the mean_waveforms.npy file that gets ingested
         return WaveformSetRunner.Output(
             *extract_waveforms(
                 data,
                 spike_times,
                 spike_clusters,
-                cluster_ids,
-                cluster_quality,
+                templates,
+                channel_map,
                 self.bit_volts,
                 self.sample_rate,
+                args['ephys_params']['vertical_site_spacing'],
                 self.params,
             )
         )
@@ -138,13 +141,18 @@ class QualityMetricsRunner(BaseModel):
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
 
+        # might want to use calculate_quality_metrics because that produces the metrics.csv file that gets ingested
         return QualityMetricsRunner.Output(
             calculate_metrics(
-                data,
                 spike_times,
                 spike_clusters,
+                spike_templates,
                 amplitudes,
-                self.sample_rate,
+                channel_map,
+                channel_pos,
+                templates,
+                pc_features,
+                pc_feature_ind,
                 self.params,
             )
         )
