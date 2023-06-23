@@ -8,5 +8,4 @@ from . import (
     clustering,
     postclustering,
     clustering_task,
-    ecephys_common,
 )
