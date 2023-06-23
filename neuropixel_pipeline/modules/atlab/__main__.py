@@ -138,7 +138,7 @@ class AtlabParams(BaseModel):
                     clustering_params=clustering_params,
                 )
                 logging.info("attempting to trigger kilosort clustering")
-                task_runner.trigger_clustering()
+                task_runner.trigger_clustering(check_for_existing_results=True)
                 logging.info("one with kilosort clustering")
             ephys.Clustering.populate()
 

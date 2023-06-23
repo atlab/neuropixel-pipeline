@@ -3,6 +3,7 @@ from typing import Optional
 from enum import Enum
 from pathlib import Path
 
+from ..readers.kilosort import Kilosort
 
 class ClusteringTaskMode(str, Enum):
     LOAD = "load"
@@ -15,16 +16,25 @@ class ClusteringTaskRunner(BaseModel):
     filename: Path = None
     clustering_params: Optional[dict] = None
 
-    def trigger_clustering(self):
-        # Locally or eventually maybe using an HTTP request to a REST server
+    def trigger_clustering(self, check_for_existing_results=False):
+        def run_kilosort(args):
+            # Locally or eventually maybe using an HTTP request to a REST server
+            from kilosort_runner.run import KilosortRunner, KilosortParams
 
-        from kilosort_runner.run import KilosortRunner, KilosortParams
+            params = KilosortParams.model_validate(self.clustering_params)
+            runner = KilosortRunner(
+                data_dir=self.data_dir,
+                results_dir=self.results_dir,
+                filename=self.filename,
+                params=params,
+            )
+            runner.run_kilosort()
+        
+        if check_for_existing_results:
+            try:
+                Kilosort(self.results_dir)
+            except FileNotFoundError:
+                run_kilosort(self)
+        else:
+            run_kilosort(self)
 
-        params = KilosortParams.model_validate(self.clustering_params)
-        runner = KilosortRunner(
-            data_dir=self.data_dir,
-            results_dir=self.results_dir,
-            filename=self.filename,
-            params=params,
-        )
-        runner.run_kilosort()
