@@ -47,7 +47,6 @@ class WaveformSetRunner(BaseModel):
                 raw_data, (int(raw_data.size / self.num_channels + 1), self.num_channels + 1)
             )
             data = data[:, self.num_channels:]
-            print(data.shape)
 
         (
             spike_times,
@@ -98,9 +97,16 @@ class QualityMetricsRunner(BaseModel):
 
         data_dir = Path(data_dir)
         raw_data = np.memmap(data_dir / bin_name, dtype="int16", mode="r")
-        data = np.reshape(
-            raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
-        )
+        if not has_sync_channel:
+            data = np.reshape(
+                raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
+            )
+        else:
+            data = np.reshape(
+                raw_data, (int(raw_data.size / self.num_channels + 1), self.num_channels + 1)
+            )
+            data = data[:, self.num_channels:]
+            print(data.shape)
 
         (
             spike_times,
