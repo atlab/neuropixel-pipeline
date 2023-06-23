@@ -431,7 +431,6 @@ class Clustering(dj.Imported):
     -> ClusteringTask
     ---
     clustering_time: datetime  # time of generation of this set of clustering results
-    package_version='': varchar(16)
     """
 
     def make(self, key):
