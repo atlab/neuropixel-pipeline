@@ -43,8 +43,9 @@ class WaveformSetRunner(BaseModel):
                 raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
             )
         else:
+            total_channels = self.num_channels + 1
             data = np.reshape(
-                raw_data, (int(raw_data.size / self.num_channels + 1), self.num_channels + 1)
+                raw_data, (int(raw_data.size / total_channels), total_channels)
             )
             data = data[:, self.num_channels:]
 
@@ -102,8 +103,9 @@ class QualityMetricsRunner(BaseModel):
                 raw_data, (int(raw_data.size / self.num_channels), self.num_channels)
             )
         else:
+            total_channels = self.num_channels + 1
             data = np.reshape(
-                raw_data, (int(raw_data.size / self.num_channels + 1), self.num_channels + 1)
+                raw_data, (int(raw_data.size / total_channels), total_channels)
             )
             data = data[:, self.num_channels:]
             print(data.shape)
