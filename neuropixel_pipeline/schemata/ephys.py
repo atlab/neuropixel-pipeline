@@ -899,8 +899,8 @@ class QualityMetrics(dj.Imported):
             bin_file = check_for_first_bin_with_prefix(session_dir, NEUROPIXEL_PREFIX)
             results = QualityMetricsRunner().calculate(
                 bin_file=bin_file,
-                clustering_output_dir=curation_output_dir,
-                has_sync_channel=True, # has_sync_channel = True is also atlab specific
+                kilosort_output_dir=curation_output_dir,
+                has_sync_channel=True,  # has_sync_channel = True is also atlab specific
             )
             print(f"QualityMetricsRunner results: {results}")
 
