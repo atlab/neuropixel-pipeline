@@ -893,8 +893,9 @@ class QualityMetrics(dj.Imported):
         if not metric_fp.exists():
             print("Constructing Quality Control metrics.csv file")
             NEUROPIXEL_PREFIX = "NPElectrophysiology" # not good to have here, this is atlab specific
-            bin_name = check_for_first_bin_with_prefix(curation_output_dir, NEUROPIXEL_PREFIX)
-            results = QualityMetricsRunner().calculate(curation_output_dir, bin_name)
+            session_dir = Path((EphysFile & key).fetch1('session_path'))
+            bin_name = check_for_first_bin_with_prefix(session_dir, NEUROPIXEL_PREFIX)
+            results = QualityMetricsRunner().calculate(session_dir, bin_name)
             print(f"QualityMetricsRunner results: {results}")
 
         metrics_df = pd.read_csv(metric_fp)
