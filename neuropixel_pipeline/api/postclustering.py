@@ -47,7 +47,7 @@ class WaveformSetRunner(BaseModel):
             data = np.reshape(
                 raw_data, (int(raw_data.size / total_channels), total_channels)
             )
-            data = data[:, self.num_channels:]
+            data = data[:, 0:self.num_channels]
 
         (
             spike_times,
@@ -107,8 +107,7 @@ class QualityMetricsRunner(BaseModel):
             data = np.reshape(
                 raw_data, (int(raw_data.size / total_channels), total_channels)
             )
-            data = data[:, self.num_channels:]
-            print(data.shape)
+            data = data[:, 0:self.num_channels]
 
         (
             spike_times,
