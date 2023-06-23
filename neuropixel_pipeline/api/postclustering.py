@@ -74,9 +74,6 @@ class WaveformSetRunner(BaseModel):
             cluster_ids,
             cluster_quality,
             cluster_amplitude,
-            pc_features,
-            pc_feature_ind,
-            template_features,
         ) = utils.load_kilosort_data(
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
@@ -137,9 +134,6 @@ class QualityMetricsRunner(BaseModel):
             cluster_ids,
             cluster_quality,
             cluster_amplitude,
-            pc_features,
-            pc_feature_ind,
-            template_features,
         ) = utils.load_kilosort_data(
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
