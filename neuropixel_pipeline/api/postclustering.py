@@ -33,6 +33,7 @@ class WaveformSetRunner(BaseModel):
     sample_rate: float = 30000.0
     num_channels: int = 384
     bit_volts: float
+    vertical_site_spacing: Any # TODO: Figure out what this does
     params: dict = {
         "samples_per_spike": 82,
         "pre_samples": 20,
@@ -77,6 +78,7 @@ class WaveformSetRunner(BaseModel):
         ) = utils.load_kilosort_data(
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
+        templates = np.load(kilosort_output_dir / 'templates.npy')
 
         # TODO: calculate_mean_waveforms
         # might want to use calculate_mean_waveforms because that produces the mean_waveforms.npy file that gets ingested
@@ -89,7 +91,7 @@ class WaveformSetRunner(BaseModel):
                 channel_map,
                 self.bit_volts,
                 self.sample_rate,
-                args['ephys_params']['vertical_site_spacing'],
+                self.vertical_site_spacing,
                 self.params,
             )
         )
@@ -120,11 +122,11 @@ class QualityMetricsRunner(BaseModel):
 
         bin_file = Path(bin_file)
         kilosort_output_dir = Path(kilosort_output_dir)
-        data = extract_data_from_bin(
-            bin_file=bin_file,
-            num_channels=self.num_channels,
-            has_sync_channel=has_sync_channel,
-        )
+        # data = extract_data_from_bin(
+        #     bin_file=bin_file,
+        #     num_channels=self.num_channels,
+        #     has_sync_channel=has_sync_channel,
+        # )
 
         (
             spike_times,
@@ -140,6 +142,7 @@ class QualityMetricsRunner(BaseModel):
         ) = utils.load_kilosort_data(
             kilosort_output_dir, self.sample_rate, convert_to_seconds=False
         )
+        templates = np.load(kilosort_output_dir / 'templates.npy')
 
         # might want to use calculate_quality_metrics because that produces the metrics.csv file that gets ingested
         return QualityMetricsRunner.Output(
@@ -151,8 +154,8 @@ class QualityMetricsRunner(BaseModel):
                 channel_map,
                 channel_pos,
                 templates,
-                pc_features,
-                pc_feature_ind,
+                None, # pc_features
+                None, # pc_feature_ind
                 self.params,
             )
         )
