@@ -9,7 +9,7 @@ import os
 
 MEAN_WAVEFORM_FILE = "mean_waveforms.npy"
 WAVEFORM_METRICS_FILE = "waveform_metrics.csv"
-CLUSTER_METRICS_FILE = "metrics.csv"
+QUALITY_METRICS_FILE = "metrics.csv"
 
 
 # i.e. Waveforms and QualityMetrics
@@ -154,7 +154,7 @@ class WaveformSetRunner(BaseModel):
         # if the cluster metrics have already been run, merge the waveform metrics into that file
         # build file path with current version
         # FIXME: Doesn't support multiple versions in the same way that the ecephys_spike_sorting package does
-        metrics_file = CLUSTER_METRICS_FILE
+        metrics_file = QUALITY_METRICS_FILE
         metrics_curr = os.path.join(
             Path(metrics_file).parent, Path(metrics_file).stem + "_.csv"
         )
@@ -240,8 +240,8 @@ class QualityMetricsRunner(BaseModel):
         kilosort_output_dir = Path(kilosort_output_dir)
 
         args = self.model_dump(by_alias=True)
-        args["cluster_metrics"] = {
-            "cluster_metrics_file": kilosort_output_dir / CLUSTER_METRICS_FILE
+        args["quality_metrics_params"] = {
+            "quality_metrics_output_file": kilosort_output_dir / QUALITY_METRICS_FILE
         }
         args["directories"] = {"kilosort_output_directory": kilosort_output_dir}
         return calculate_quality_metrics(args)
