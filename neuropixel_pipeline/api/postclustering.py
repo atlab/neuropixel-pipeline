@@ -30,23 +30,28 @@ def extract_data_from_bin(
 
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/_schemas.py
 class WaveformSetRunner(BaseModel):
-    sample_rate: float = Field(
-        default=30000.0,
-        description="Sample rate of Neuropixels AP band continuous data",
-    )
-    num_channels: int = Field(
-        default=384, description="Total number of channels in binary data files"
-    )
-    bit_volts: float = Field(
-        default=0.195, # This might not want to have a default?
-        description="Scalar required to convert int16 values into microvolts",
-    )
-    vertical_site_spacing: float = Field(
-        default=20e-6, description="Vertical site spacing in meters"
+    generic_params: WaveformSetRunner.GenericParams = Field(
+        alias="epyhs_params", default_factory=lambda: WaveformSetRunner.GenericParams()
     )
     params: WaveformSetRunner.Params = Field(
-        default_factory=lambda: WaveformSetRunner.Params()
+        alias="mean_waveform_params", default_factory=lambda: WaveformSetRunner.Params()
     )
+
+    class GenericParams(BaseModel):
+        sample_rate: float = Field(
+            default=30000.0,
+            description="Sample rate of Neuropixels AP band continuous data",
+        )
+        num_channels: int = Field(
+            default=384, description="Total number of channels in binary data files"
+        )
+        bit_volts: float = Field(
+            default=0.195,  # This might not want to have a default?
+            description="Scalar required to convert int16 values into microvolts",
+        )
+        vertical_site_spacing: float = Field(
+            default=20e-6, description="Vertical site spacing in meters"
+        )
 
     class Params(BaseModel):
         samples_per_spike: int = Field(
@@ -84,14 +89,9 @@ class WaveformSetRunner(BaseModel):
             default=8,
             help="disk radius (um) about pk-chan for snr calculation in C_waves",
         )
-        mean_waveforms_file: Path = Field(help="Path to mean waveforms file (.npy)") # Is this for the output file??
-
-    @dataclass
-    class Output:
-        data: Any
-        spike_counts: Any
-        coords: Any
-        labesl: Any
+        mean_waveforms_file: Path = Field(
+            help="Path to mean waveforms file (.npy)"
+        )  # Is this for the output file??
 
     def calculate(
         self, bin_file: Path, kilosort_output_dir: Path, has_sync_channel=False
@@ -144,16 +144,23 @@ class WaveformSetRunner(BaseModel):
 
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
 class QualityMetricsRunner(BaseModel):
-    sample_rate: float = Field(
-        default=30000.0,
-        description="Sample rate of Neuropixels AP band continuous data",
-    )
-    num_channels: int = Field(
-        default=384, description="Total number of channels in binary data files"
+    generic_params: QualityMetricsRunner.GenericParams = Field(
+        alias="epyhs_params",
+        default_factory=lambda: QualityMetricsRunner.GenericParams(),
     )
     params: QualityMetricsRunner.Params = Field(
-        default_factory=lambda: QualityMetricsRunner.Params()
+        alias="quality_metrics_params",
+        default_factory=lambda: QualityMetricsRunner.Params(),
     )
+
+    class GenericParams(BaseModel):
+        sample_rate: float = Field(
+            default=30000.0,
+            description="Sample rate of Neuropixels AP band continuous data",
+        )
+        num_channels: int = Field(
+            default=384, description="Total number of channels in binary data files"
+        )
 
     class Params(BaseModel):
         isi_threshold: float = Field(
@@ -188,52 +195,19 @@ class QualityMetricsRunner(BaseModel):
             default=100.0, help="Interval length is seconds for computing spike depth"
         )
         include_pcs: bool = Field(
-            default=False, help="Set to false if principal component analysis is not available"
+            default=False,
+            help="Set to false if principal component analysis is not available",
         )
 
-    @dataclass
-    class Output:
-        metrics: Any
-
-    def calculate(
-        self, bin_file: Path, kilosort_output_dir: Path, has_sync_channel=False
-    ):
-        from ecephys_spike_sorting.modules.quality_metrics.metrics import (
-            calculate_metrics,
+    def calculate(self, bin_file: Path, kilosort_output_dir: Path):
+        from ecephys_spike_sorting.modules.quality_metrics.__main__ import (
+            calculate_quality_metrics,
         )
-        import ecephys_spike_sorting.common.utils as utils
 
         bin_file = Path(bin_file)
         kilosort_output_dir = Path(kilosort_output_dir)
 
-        (
-            spike_times,
-            spike_clusters,
-            spike_templates,
-            amplitudes,
-            unwhitened_temps,
-            channel_map,
-            channel_pos,
-            cluster_ids,
-            cluster_quality,
-            cluster_amplitude,
-        ) = utils.load_kilosort_data(
-            kilosort_output_dir, self.sample_rate, convert_to_seconds=False
-        )
-        templates = np.load(kilosort_output_dir / "templates.npy")
-
-        # might want to use calculate_quality_metrics because that produces the metrics.csv file that gets ingested
-        return QualityMetricsRunner.Output(
-            calculate_metrics(
-                spike_times,
-                spike_clusters,
-                spike_templates,
-                amplitudes,
-                channel_map,
-                channel_pos,
-                templates,
-                None,  # pc_features
-                None,  # pc_feature_ind
-                self.params.model_dump(),
-            )
-        )
+        args = self.model_dump(by_alias=True)
+        args['cluster_metrics'] = {'cluster_metrics_file': kilosort_output_dir / 'metrics.csv'}
+        args['directories'] = {'kilosort_output_directory': kilosort_output_dir}
+        return calculate_quality_metrics(args)
