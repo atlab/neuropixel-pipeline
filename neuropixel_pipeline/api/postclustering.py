@@ -88,9 +88,6 @@ class WaveformSetRunner(BaseModel):
             default=8,
             help="disk radius (um) about pk-chan for snr calculation in C_waves",
         )
-        mean_waveforms_file: Path = Field(
-            help="Path to mean waveforms file (.npy)"
-        )  # Is this for the output file??
 
     # This cannot use calculate_mean_waveforms to directly produce the mean_waveforms.npy file
     # We need to support stripping the sync_channel from the recording session .bin
