@@ -106,6 +106,7 @@ class QualityMetricsRunner(BaseModel):
         "pre_samples": 20,
         "snr_spike_count": 500,
         "isi_threshold": 0.015,
+        "include_pcs": False,
     }
 
     @dataclass
