@@ -199,12 +199,11 @@ class QualityMetricsRunner(BaseModel):
             help="Set to false if principal component analysis is not available",
         )
 
-    def calculate(self, bin_file: Path, kilosort_output_dir: Path):
+    def calculate(self, kilosort_output_dir: Path):
         from ecephys_spike_sorting.modules.quality_metrics.__main__ import (
             calculate_quality_metrics,
         )
 
-        bin_file = Path(bin_file)
         kilosort_output_dir = Path(kilosort_output_dir)
 
         args = self.model_dump(by_alias=True)
