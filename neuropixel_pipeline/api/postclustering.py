@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from pydantic import BaseModel, Field, validate_call
-from pydantic.dataclasses import dataclass
-from typing import Optional, Any
 import numpy as np
+import pandas as pd
+import time
+import os
+
+MEAN_WAVEFORM_FILE = Path("mean_waveforms.npy")
+WAVEFORM_METRICS_FILE = Path("waveform_metrics.csv")
+CLUSTER_METRICS_FILE = Path("metrics.csv")
 
 
 # i.e. Waveforms and QualityMetrics
@@ -46,7 +51,7 @@ class WaveformSetRunner(BaseModel):
             default=384, description="Total number of channels in binary data files"
         )
         bit_volts: float = Field(
-            default=0.195,  # This might not want to have a default?
+            default=0.195,  # FIXME: This might not want to have a default?
             description="Scalar required to convert int16 values into microvolts",
         )
         vertical_site_spacing: float = Field(
@@ -75,12 +80,6 @@ class WaveformSetRunner(BaseModel):
         site_range: int = Field(
             default=16, help="Number of sites to use for 2D waveform metrics"
         )
-        cWaves_path: Optional[Path] = Field(
-            None, help="directory containing the TPrime executable."
-        )
-        use_C_Waves: bool = Field(
-            default=False, help="Use faster C routine to calculate mean waveforms"
-        )
         snr_radius: int = Field(
             default=8,
             help="disk radius (chans) about pk-chan for snr calculation in C_waves",
@@ -93,16 +92,28 @@ class WaveformSetRunner(BaseModel):
             help="Path to mean waveforms file (.npy)"
         )  # Is this for the output file??
 
+    # This cannot use calculate_mean_waveforms to directly produce the mean_waveforms.npy file
+    # We need to support stripping the sync_channel from the recording session .bin
+    # It also doesn't support C_waves
     def calculate(
         self, bin_file: Path, kilosort_output_dir: Path, has_sync_channel=False
     ):
+        from ecephys_spike_sorting.common.utils import load_kilosort_data
         from ecephys_spike_sorting.modules.mean_waveforms.extract_waveforms import (
             extract_waveforms,
+            writeDataAsNpy,
         )
-        import ecephys_spike_sorting.common.utils as utils
 
         bin_file = Path(bin_file)
         kilosort_output_dir = Path(kilosort_output_dir)
+
+        print("ecephys spike sorting: mean waveforms module")
+
+        start = time.time()
+
+        print("Calculating mean waveforms using python.")
+        print("Loading data...")
+
         data = extract_data_from_bin(
             bin_file=bin_file,
             num_channels=self.num_channels,
@@ -114,32 +125,60 @@ class WaveformSetRunner(BaseModel):
             spike_clusters,
             spike_templates,
             amplitudes,
-            unwhitened_temps,
+            templates,
             channel_map,
             channel_pos,
-            cluster_ids,
+            clusterIDs,
             cluster_quality,
             cluster_amplitude,
-        ) = utils.load_kilosort_data(
-            kilosort_output_dir, self.sample_rate, convert_to_seconds=False
+        ) = load_kilosort_data(
+            kilosort_output_dir,
+            self.generic_params.sample_rate,
+            convert_to_seconds=False,
         )
-        templates = np.load(kilosort_output_dir / "templates.npy")
 
-        # TODO: calculate_mean_waveforms
-        # might want to use calculate_mean_waveforms because that produces the mean_waveforms.npy file that gets ingested
-        return WaveformSetRunner.Output(
-            *extract_waveforms(
-                data,
-                spike_times,
-                spike_clusters,
-                templates,
-                channel_map,
-                self.bit_volts,
-                self.sample_rate,
-                self.vertical_site_spacing,
-                self.params.model_dump(),
-            )
+        print("Calculating mean waveforms...")
+
+        waveforms, spike_counts, coords, labels, metrics = extract_waveforms(
+            data,
+            spike_times,
+            spike_clusters,
+            templates,
+            channel_map,
+            self.generics_params.bit_volts,
+            self.generics_params.sample_rate,
+            self.generics_params.vertical_site_spacing,
+            self.params.model_dump(),
         )
+
+        writeDataAsNpy(waveforms, kilosort_output_dir / MEAN_WAVEFORM_FILE)
+        metrics.to_csv(kilosort_output_dir / WAVEFORM_METRICS_FILE, index=False)
+
+        # if the cluster metrics have already been run, merge the waveform metrics into that file
+        # build file path with current version
+        # FIXME: Doesn't support multiple versions in the same way that the ecephys_spike_sorting package does
+        metrics_file = CLUSTER_METRICS_FILE
+        metrics_curr = os.path.join(
+            Path(metrics_file).parent, Path(metrics_file).stem + "_.csv"
+        )
+
+        if os.path.exists(metrics_curr):
+            qmetrics = pd.read_csv(metrics_curr)
+            qmetrics = qmetrics.drop(qmetrics.columns[0], axis="columns")
+            qmetrics = qmetrics.merge(
+                pd.read_csv(kilosort_output_dir / WAVEFORM_METRICS_FILE, index_col=0),
+                on="cluster_id",
+                suffixes=("_quality_metrics", "_waveform_metrics"),
+            )
+            print("Saving merged quality metrics ...")
+            qmetrics.to_csv(metrics_curr, index=False)
+
+        execution_time = time.time() - start
+
+        print("total time: " + str(np.around(execution_time, 2)) + " seconds")
+        print()
+
+        return {"execution_time": execution_time}  # output manifest
 
 
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
@@ -207,6 +246,8 @@ class QualityMetricsRunner(BaseModel):
         kilosort_output_dir = Path(kilosort_output_dir)
 
         args = self.model_dump(by_alias=True)
-        args['cluster_metrics'] = {'cluster_metrics_file': kilosort_output_dir / 'metrics.csv'}
-        args['directories'] = {'kilosort_output_directory': kilosort_output_dir}
+        args["cluster_metrics"] = {
+            "cluster_metrics_file": kilosort_output_dir / "metrics.csv"
+        }
+        args["directories"] = {"kilosort_output_directory": kilosort_output_dir}
         return calculate_quality_metrics(args)
