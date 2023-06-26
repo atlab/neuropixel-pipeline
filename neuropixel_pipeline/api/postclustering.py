@@ -113,7 +113,7 @@ class WaveformSetRunner(BaseModel):
 
         data = extract_data_from_bin(
             bin_file=bin_file,
-            num_channels=self.num_channels,
+            num_channels=self.generic_params.num_channels,
             has_sync_channel=has_sync_channel,
         )
 
