@@ -7,9 +7,9 @@ import pandas as pd
 import time
 import os
 
-MEAN_WAVEFORM_FILE = Path("mean_waveforms.npy")
-WAVEFORM_METRICS_FILE = Path("waveform_metrics.csv")
-CLUSTER_METRICS_FILE = Path("metrics.csv")
+MEAN_WAVEFORM_FILE = "mean_waveforms.npy"
+WAVEFORM_METRICS_FILE = "waveform_metrics.csv"
+CLUSTER_METRICS_FILE = "metrics.csv"
 
 
 # i.e. Waveforms and QualityMetrics
@@ -178,7 +178,7 @@ class WaveformSetRunner(BaseModel):
         return {"execution_time": execution_time}  # output manifest
 
 
-# https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
+# https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
 class QualityMetricsRunner(BaseModel):
     generic_params: QualityMetricsRunner.GenericParams = Field(
         alias="ephys_params",
@@ -205,11 +205,9 @@ class QualityMetricsRunner(BaseModel):
         min_isi: float = Field(
             default=0.00, help="Minimum time (in seconds) for ISI violation"
         )
-        tbin_sec: float = Field(
-            default=0.001, help="time bin in seconds for ccg in contam_rate calculation"
-        )
-        max_radius_um: int = Field(
-            default=68, help="Maximum radius for computing PC metrics, in um"
+        num_channels_to_compare: int = Field(
+            default=13,
+            help="Number of channels to use for computing PC metrics; must be odd",
         )
         max_spikes_for_unit: int = Field(
             default=500, help="Number of spikes to subsample for computing PC metrics"
@@ -230,9 +228,8 @@ class QualityMetricsRunner(BaseModel):
         drift_metrics_interval_s: float = Field(
             default=100.0, help="Interval length is seconds for computing spike depth"
         )
-        include_pcs: bool = Field(
-            default=False,
-            help="Set to false if principal component analysis is not available",
+        include_pc_metrics: bool = Field(
+            default=True, help="Compute features that require principal components"
         )
 
     def calculate(self, kilosort_output_dir: Path):
@@ -244,7 +241,7 @@ class QualityMetricsRunner(BaseModel):
 
         args = self.model_dump(by_alias=True)
         args["cluster_metrics"] = {
-            "cluster_metrics_file": kilosort_output_dir / "metrics.csv"
+            "cluster_metrics_file": kilosort_output_dir / CLUSTER_METRICS_FILE
         }
         args["directories"] = {"kilosort_output_directory": kilosort_output_dir}
         return calculate_quality_metrics(args)
