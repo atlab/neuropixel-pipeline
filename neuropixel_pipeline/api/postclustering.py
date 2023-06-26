@@ -31,7 +31,7 @@ def extract_data_from_bin(
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/_schemas.py
 class WaveformSetRunner(BaseModel):
     generic_params: WaveformSetRunner.GenericParams = Field(
-        alias="epyhs_params", default_factory=lambda: WaveformSetRunner.GenericParams()
+        alias="ephys_params", default_factory=lambda: WaveformSetRunner.GenericParams()
     )
     params: WaveformSetRunner.Params = Field(
         alias="mean_waveform_params", default_factory=lambda: WaveformSetRunner.Params()
@@ -145,7 +145,7 @@ class WaveformSetRunner(BaseModel):
 # https://github.com/jenniferColonell/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/_schemas.py
 class QualityMetricsRunner(BaseModel):
     generic_params: QualityMetricsRunner.GenericParams = Field(
-        alias="epyhs_params",
+        alias="ephys_params",
         default_factory=lambda: QualityMetricsRunner.GenericParams(),
     )
     params: QualityMetricsRunner.Params = Field(
