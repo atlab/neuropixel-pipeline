@@ -142,9 +142,9 @@ class WaveformSetRunner(BaseModel):
             spike_clusters,
             templates,
             channel_map,
-            self.generics_params.bit_volts,
-            self.generics_params.sample_rate,
-            self.generics_params.vertical_site_spacing,
+            self.generic_params.bit_volts,
+            self.generic_params.sample_rate,
+            self.generic_params.vertical_site_spacing,
             self.params.model_dump(),
         )
 
