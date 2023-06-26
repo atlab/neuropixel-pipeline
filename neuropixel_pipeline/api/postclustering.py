@@ -240,6 +240,11 @@ class QualityMetricsRunner(BaseModel):
         kilosort_output_dir = Path(kilosort_output_dir)
 
         args = self.model_dump(by_alias=True)
-        args["quality_metrics_params"]["quality_metrics_output_file"] = kilosort_output_dir / QUALITY_METRICS_FILE
+        args["quality_metrics_params"]["quality_metrics_output_file"] = (
+            kilosort_output_dir / QUALITY_METRICS_FILE
+        )
         args["directories"] = {"kilosort_output_directory": kilosort_output_dir}
+        args["waveform_metrics"] = {
+            "waveform_metrics_file": kilosort_output_dir / WAVEFORM_METRICS_FILE
+        }
         return calculate_quality_metrics(args)
