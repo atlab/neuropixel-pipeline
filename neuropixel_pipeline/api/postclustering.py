@@ -188,7 +188,7 @@ class QualityMetricsRunner(BaseModel):
             default=100.0, help="Interval length is seconds for computing spike depth"
         )
         include_pcs: bool = Field(
-            default=True, help="Set to false if features were not saved with Phy output"
+            default=False, help="Set to false if principal component analysis is not available"
         )
 
     @dataclass
