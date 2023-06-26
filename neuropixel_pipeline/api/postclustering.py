@@ -229,7 +229,7 @@ class QualityMetricsRunner(BaseModel):
             default=100.0, help="Interval length is seconds for computing spike depth"
         )
         include_pc_metrics: bool = Field(
-            default=True, help="Compute features that require principal components"
+            default=False, help="Compute features that require principal components"
         )
 
     def calculate(self, kilosort_output_dir: Path):
