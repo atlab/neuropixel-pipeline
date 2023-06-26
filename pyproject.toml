@@ -23,7 +23,8 @@ dependencies = [
     # "polars[numpy,pandas]",
     "pandas",
     "h5py",
-    "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
+    # "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
+    "ecephys_spike_sorting @ git+https://github.com/AllenInstitute/ecephys_spike_sorting.git",
 ]
 dynamic = ["version"]
 
