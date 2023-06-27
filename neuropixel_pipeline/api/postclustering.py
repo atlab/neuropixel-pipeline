@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-MEAN_WAVEFORM_FILE = "mean_waveforms.npy"
 WAVEFORM_METRICS_FILE = "waveform_metrics.csv"
 QUALITY_METRICS_FILE = "metrics.csv"
 

@@ -41,7 +41,7 @@ class ClusteringTaskRunner(BaseModel):
                     "skipping triggering kilosort because `check_for_existing_results` is set to True"
                 )
             except FileNotFoundError:
-                print(f"kilosort results do not exist yet, triggering kilosort")
+                print("kilosort results do not exist yet, triggering kilosort")
                 run_kilosort(self)
         else:
             run_kilosort(self)

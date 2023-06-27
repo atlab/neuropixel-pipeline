@@ -3,14 +3,10 @@
 import datajoint as dj
 import numpy as np
 
-from neuropixel_pipeline.api.postclustering import (
-    WaveformSetRunner,
-    QualityMetricsRunner,
-)
+from neuropixel_pipeline.api.postclustering import QualityMetricsRunner
 from . import probe
 from .. import utils
 from ..readers import labview, kilosort
-from ..utils import check_for_first_bin_with_prefix
 from pathlib import Path
 
 

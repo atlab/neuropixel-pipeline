@@ -23,10 +23,12 @@ from ...utils import check_for_first_bin_with_prefix
 from ...schemata import probe, ephys
 
 
-# Related to how to use the pipeline, not yet used
+# Related to how to use the pipeline, not fully used yet
+# TODO: For non-minion mode all populates should be restricted to
+#       just the keys related to the current scan_key, otherwise no populate restriction is used
 class PipelineMode(str, Enum):
     MINION = "minion"
-    NO_CURATION = "no curation"  # TODO: For non-minion mode all populates should be restricted to just the keys related to the current scan_key, otherwise no populate restriction is used
+    NO_CURATION = "no curation"
     CURATION = "curation"
 
 

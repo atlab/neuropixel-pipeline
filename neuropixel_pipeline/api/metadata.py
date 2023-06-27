@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, constr, condecimal
+from pydantic import BaseModel, condecimal
 from typing import Optional
 from typing import List
 from enum import Enum
