@@ -39,7 +39,7 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
     config_params: List[str] = Field(alias="ConfigParams")
 
     #
-    config_data: Optional[Any] = Field(alias="Config")
+    config_data: Optional[Any] = Field(None, alias="Config")
 
     @field_validator("config_params", "channel_names", mode="before")
     def convert_to_list(cls, v):
@@ -64,7 +64,10 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
 
     @classmethod
     def from_h5(
-        cls, directory: Path, family: str = "NPElectrophysiology%d.h5"
+        cls,
+        directory: Path,
+        family: str = "NPElectrophysiology%d.h5",
+        load_config_data=True,
     ) -> LabviewNeuropixelMeta:
         """
         Uses an h5 family driver if necessary
@@ -80,9 +83,10 @@ class LabviewNeuropixelMeta(BaseModel, arbitrary_types_allowed=True):
                 cls._validate_probe_naming_convention(meta, key, "SerialNum")
                 cls._validate_probe_naming_convention(meta, key, "t0")
 
-            for key in f.keys():
-                if "Config" in key:
-                    meta["Config"] = np.array(f[key])
+            if load_config_data:
+                for key in f.keys():
+                    if "Config" in key:
+                        meta["Config"] = np.array(f[key])
 
         return cls.model_validate(meta)
 

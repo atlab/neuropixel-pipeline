@@ -6,8 +6,6 @@
 from . import (
     metadata,
     clustering,
-    preclustering,
     postclustering,
     clustering_task,
-    ecephys_common,
 )

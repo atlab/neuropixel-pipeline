@@ -3,11 +3,7 @@
 import datajoint as dj
 import numpy as np
 
-from neuropixel_pipeline.api.clustering_task import ClusteringTaskRunner
-from neuropixel_pipeline.api.postclustering import (
-    WaveformSetRunner,
-    QualityMetricsRunner,
-)
+from neuropixel_pipeline.api.postclustering import QualityMetricsRunner
 from . import probe
 from .. import utils
 from ..readers import labview, kilosort
@@ -29,7 +25,7 @@ class Session(dj.Manual):
 
     definition = """
     # Session: table connection
-    session_id : int auto_increment # Session primary key hash
+    session_id : int # Session primary key hash
     ---
     animal_id=null: int unsigned # animal id
     session=null: smallint unsigned # original session id
@@ -41,6 +37,14 @@ class Session(dj.Manual):
     @classmethod
     def add_session(cls, session_meta, error_on_duplicate=True):
         if not cls & session_meta:
+            # Synthesize session id, auto_increment cannot be used here if it's used later
+            # Additionally this does make it more difficult to accidentally add two of the same session
+            session_id = (
+                dj.U()
+                .aggr(cls & session_meta, n="ifnull(max(session_id)+1,1)")
+                .fetch1("n")
+            )
+            session_meta["session_id"] = session_id
             cls.insert1(
                 session_meta
             )  # should just hash as the primary key and put the rest as a longblob?
@@ -190,24 +194,27 @@ class LFP(dj.Imported):
     lfp_mean: longblob         # (uV) mean of LFP across electrodes - shape (time,)
     """
 
-    class Electrode(dj.Part):
-        """Saves local field potential data for each electrode."""
+    # class Electrode(dj.Part):
+    #     """Saves local field potential data for each electrode."""
 
-        definition = """
-        -> master
-        -> probe.ElectrodeConfig.Electrode
-        ---
-        lfp: longblob               # (uV) recorded lfp at this electrode
-        """
+    #     definition = """
+    #     -> master
+    #     -> probe.ElectrodeConfig.Electrode
+    #     ---
+    #     lfp: longblob               # (uV) recorded lfp at this electrode
+    #     """
 
     def make(self, key):
         """Populates the LFP tables."""
-        acq_software = (EphysRecording * ProbeInsertion & key).fetch1("acq_software")
+        recording_meta = (EphysFile * ProbeInsertion & key).fetch()
+        acq_software = recording_meta["acq_software"]
 
         electrode_keys, lfp = [], []
 
         if acq_software == "LabviewV1":
-            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(key["filepath"])
+            labview_metadata = labview.LabviewNeuropixelMeta.from_h5(
+                recording_meta["session_path"]
+            )
 
             raise NotImplementedError(
                 "LabviewV1 not implemented yet for LFP population"
@@ -395,6 +402,22 @@ class ClusteringTask(dj.Manual):
     task_mode='load': enum('load', 'trigger')  # 'load': load computed analysis results, 'trigger': trigger computation
     """
 
+    @classmethod
+    def build_key_from_scan(
+        cls, scan_key: dict, insertion_number: int, clustering_method: str, fetch=False
+    ) -> dict:
+        task_key = dict(
+            session_id=(Session & scan_key).fetch1("session_id"),
+            insertion_number=insertion_number,
+            paramset_idx=(
+                ClusteringParamSet & {"clustering_method": clustering_method}
+            ).fetch1("paramset_idx"),
+        )
+        if fetch:
+            return (cls & task_key).fetch()
+        else:
+            return task_key
+
 
 @schema
 class Clustering(dj.Imported):
@@ -405,13 +428,10 @@ class Clustering(dj.Imported):
     -> ClusteringTask
     ---
     clustering_time: datetime  # time of generation of this set of clustering results
-    package_version='': varchar(16)
     """
 
     def make(self, key):
         source_key = (ClusteringTask & key).fetch1()
-        task_runner = ClusteringTaskRunner.model_validate(source_key)
-        task_runner.trigger_clustering()  # run kilosort if it's set to trigger
 
         clustering_output_dir = Path(source_key["clustering_output_dir"])
         creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(
@@ -437,10 +457,46 @@ class CurationType(dj.Lookup):  # Table definition subject to change
     ---
     """
 
-    contents = zip(["no curation"])
+    contents = zip(["no curation", "phy"])
 
 
-# TODO: Would 0 mean no curation, or is a different design for the key better
+@schema
+class CurationTask(dj.Manual):
+    definition = """
+    # Curation that should be ingested
+    -> Clustering
+    -> CurationType
+    curation_output_dir: varchar(255) # output directory of the curated results to be ingested
+    """
+
+    @classmethod
+    def add_curation_task(
+        cls, scan_key: dict, curation_type: str, curation_output_dir: Path
+    ):
+        with cls.connection.transaction:
+            clustering_key = (Clustering & (Session & scan_key)).fetch1("KEY")
+            cls.insert1(
+                dict(
+                    **clustering_key,
+                    curation=curation_type,
+                    curation_output_dir=curation_output_dir,
+                )
+            )
+
+
+@schema
+class CurationTaskFinished(dj.Imported):
+    definition = """
+    # Curation ingestion task finished
+    -> CurationTask
+    ---
+    timestamp=CURRENT_TIMESTAMP: timestamp # timestamp when curated results were inserted
+    """
+
+    def make(self, key):
+        pass
+
+
 @schema
 class Curation(dj.Manual):
     """Curation procedure table."""
@@ -456,8 +512,9 @@ class Curation(dj.Manual):
     curation_note='': varchar(2000)
     """
 
+    @classmethod
     def create1_from_clustering_task(
-        self, key, curation_output_dir, curation_note="", skip_duplicates=True
+        cls, key, curation_output_dir=None, curation_note="", skip_duplicates=True
     ):
         """
         A function to create a new corresponding "Curation" for a particular
@@ -469,31 +526,29 @@ class Curation(dj.Manual):
                 f" for: {key}; do `Clustering.populate(key)`"
             )
 
-        task_mode, output_dir = (ClusteringTask & key).fetch1(
-            "task_mode", "clustering_output_dir"
-        )
+        if curation_output_dir is None:
+            curation_output_dir = (ClusteringTask & key).fetch1("clustering_output_dir")
 
-        creation_time, is_curated, is_qc = kilosort.extract_clustering_info(
+        creation_time, _, _ = kilosort.Kilosort.extract_clustering_info(
             curation_output_dir
         )
 
-        # Synthesize curation_id (why no auto_increment??)
-        curation_id = (
-            dj.U().aggr(self & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
-        )
-        self.insert1(
-            {
-                **key,
-                "curation_id": curation_id,
-                "curation_time": creation_time,
-                "curation_output_dir": output_dir,
-                "manual_curation": is_curated,
-                "curation_note": curation_note,
-            },
-            skip_duplicates=skip_duplicates,
-        )
+        with cls.connection.transaction:
+            # Synthesize curation_id, no auto_increment for the same reason as Session
+            curation_id = (
+                dj.U().aggr(cls & key, n="ifnull(max(curation_id)+1,1)").fetch1("n")
+            )
 
-        return curation_id
+            cls.insert1(
+                {
+                    **key,
+                    "curation_id": curation_id,
+                    "curation_time": creation_time,
+                    "curation_output_dir": curation_output_dir,
+                    "curation_note": curation_note,
+                },
+                skip_duplicates=skip_duplicates,
+            )
 
 
 # TODO: Remove longblob types, replace with external-attach (or some form of this)
@@ -557,13 +612,12 @@ class CuratedClustering(dj.Imported):
         spike_sites = kilosort_dataset.data["spike_sites"]
         spike_depths = kilosort_dataset.data["spike_depths"]
 
-        ephys_session_dir = Path((EphysFile & key).fetch1("session_path"))
-        labview_metadata = labview.LabviewNeuropixelMeta.from_h5(ephys_session_dir)
-        electrode_config_hash = labview_metadata.electrode_config_hash()
-
-        probe_type = (probe.Probe & dict(probe=labview_metadata.serial_number)).fetch1(
-            "probe_type"
+        electrode_config_hash = (EphysRecording * probe.ElectrodeConfig & key).fetch1(
+            "electrode_config_hash"
         )
+
+        serial_number = dj.U("probe") & (ProbeInsertion & key)
+        probe_type = (probe.Probe & serial_number).fetch1("probe_type")
 
         # -- Insert unit, label, peak-chn
         units = []
@@ -601,162 +655,7 @@ class CuratedClustering(dj.Imported):
         self.Unit.insert(insert_units)
 
 
-# important to note the original source of these quality metrics:
-#   https://allensdk.readthedocs.io/en/latest/
-#   https://github.com/AllenInstitute/ecephys_spike_sorting
-#
-@schema
-class WaveformSet(dj.Imported):
-    """A set of spike waveforms for units out of a given CuratedClustering."""
-
-    definition = """
-    # A set of spike waveforms for units out of a given CuratedClustering
-    -> CuratedClustering
-    """
-
-    class PeakWaveform(dj.Part):
-        """Mean waveform across spikes for a given unit."""
-
-        definition = """
-        # Mean waveform across spikes for a given unit at its representative electrode
-        -> master
-        -> CuratedClustering.Unit
-        ---
-        peak_electrode_waveform: longblob  # (uV) mean waveform for a given unit at its representative electrode
-        """
-
-    class Waveform(dj.Part):
-        """Spike waveforms for a given unit."""
-
-        definition = """
-        # Spike waveforms and their mean across spikes for the given unit
-        -> master
-        -> CuratedClustering.Unit
-        -> probe.ElectrodeConfig.Electrode
-        ---
-        waveform_mean: longblob   # (uV) mean waveform across spikes of the given unit
-        waveforms=null: longblob  # (uV) (spike x sample) waveforms of a sampling of spikes at the given electrode for the given unit
-        """
-
-    def make(self, key):
-        """Populates waveform tables."""
-        curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
-
-        kilosort_dataset = kilosort.Kilosort(curation_output_dir)
-
-        acq_software, probe_serial_number = (
-            EphysRecording * ProbeInsertion & key
-        ).fetch1("acq_software", "probe")
-
-        # -- Get channel and electrode-site mapping
-        recording_key = (EphysRecording & key).fetch1("KEY")
-        channel2electrodes = get_neuropixels_channel2electrode_map(
-            recording_key, acq_software
-        )
-
-        is_qc = (Curation & key).fetch1("quality_control")
-
-        # Get all units
-        units = {
-            u["unit"]: u
-            for u in (CuratedClustering.Unit & key).fetch(as_dict=True, order_by="unit")
-        }
-
-        if is_qc:
-            unit_waveforms = np.load(
-                curation_output_dir / "mean_waveforms.npy"
-            )  # unit x channel x sample
-
-            def yield_unit_waveforms():
-                for unit_no, unit_waveform in zip(
-                    kilosort_dataset.data["cluster_ids"], unit_waveforms
-                ):
-                    unit_peak_waveform = {}
-                    unit_electrode_waveforms = []
-                    if unit_no in units:
-                        for channel, channel_waveform in zip(
-                            kilosort_dataset.data["channel_map"], unit_waveform
-                        ):
-                            unit_electrode_waveforms.append(
-                                {
-                                    **units[unit_no],
-                                    **channel2electrodes[channel],
-                                    "waveform_mean": channel_waveform,
-                                }
-                            )
-                            if (
-                                channel2electrodes[channel]["electrode"]
-                                == units[unit_no]["electrode"]
-                            ):
-                                unit_peak_waveform = {
-                                    **units[unit_no],
-                                    "peak_electrode_waveform": channel_waveform,
-                                }
-                    yield unit_peak_waveform, unit_electrode_waveforms
-
-        else:
-            if acq_software == "LabviewV1":
-                neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(
-                    key["file_path"]
-                )
-            elif acq_software == "SpikeGLX":
-                spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
-                neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
-            elif acq_software == "Open Ephys":
-                session_path = find_full_path(
-                    get_ephys_root_data_dir(), get_session_directory(key)
-                )
-                openephys_dataset = openephys.OpenEphys(session_path)
-                neuropixels_recording = openephys_dataset.probes[probe_serial_number]
-            else:
-                raise NotImplementedError(f"for acq_software == {acq_software}")
-
-            def yield_unit_waveforms():
-                for unit_dict in units.values():
-                    unit_peak_waveform = {}
-                    unit_electrode_waveforms = []
-
-                    spikes = unit_dict["spike_times"]
-                    waveforms = neuropixels_recording.extract_spike_waveforms(
-                        spikes, kilosort_dataset.data["channel_map"]
-                    )  # (sample x channel x spike)
-                    waveforms = waveforms.transpose(
-                        (1, 2, 0)
-                    )  # (channel x spike x sample)
-                    for channel, channel_waveform in zip(
-                        kilosort_dataset.data["channel_map"], waveforms
-                    ):
-                        unit_electrode_waveforms.append(
-                            {
-                                **unit_dict,
-                                **channel2electrodes[channel],
-                                "waveform_mean": channel_waveform.mean(axis=0),
-                                "waveforms": channel_waveform,
-                            }
-                        )
-                        if (
-                            channel2electrodes[channel]["electrode"]
-                            == unit_dict["electrode"]
-                        ):
-                            unit_peak_waveform = {
-                                **unit_dict,
-                                "peak_electrode_waveform": channel_waveform.mean(
-                                    axis=0
-                                ),
-                            }
-
-                    yield unit_peak_waveform, unit_electrode_waveforms
-
-        # insert waveform on a per-unit basis to mitigate potential memory issue
-        self.insert1(key)
-        for unit_peak_waveform, unit_electrode_waveforms in yield_unit_waveforms():
-            if unit_peak_waveform:
-                self.PeakWaveform.insert1(unit_peak_waveform, ignore_extra_fields=True)
-            if unit_electrode_waveforms:
-                self.Waveform.insert(unit_electrode_waveforms, ignore_extra_fields=True)
-
-
-# important to note the original source of these quality metrics:
+# important to note the original source of these quality metric calculations:
 #   https://allensdk.readthedocs.io/en/latest/
 #   https://github.com/AllenInstitute/ecephys_spike_sorting
 #
@@ -778,39 +677,10 @@ class QualityMetrics(dj.Imported):
         -> CuratedClustering.Unit
         ---
         firing_rate=null: float # (Hz) firing rate for a unit
-        snr=null: float  # signal-to-noise ratio for a unit
         presence_ratio=null: float  # fraction of time in which spikes are present
         isi_violation=null: float   # rate of ISI violation as a fraction of overall rate
         number_violation=null: int  # total number of ISI violations
         amplitude_cutoff=null: float  # estimate of miss rate based on amplitude histogram
-        isolation_distance=null: float  # distance to nearest cluster in Mahalanobis space
-        l_ratio=null: float  #
-        d_prime=null: float  # Classification accuracy based on LDA
-        nn_hit_rate=null: float  # Fraction of neighbors for target cluster that are also in target cluster
-        nn_miss_rate=null: float # Fraction of neighbors outside target cluster that are in target cluster
-        silhouette_score=null: float  # Standard metric for cluster overlap
-        max_drift=null: float  # Maximum change in spike depth throughout recording
-        cumulative_drift=null: float  # Cumulative change in spike depth throughout recording
-        contamination_rate=null: float #
-        """
-
-    class Waveform(dj.Part):
-        """Waveform metrics for a particular unit."""
-
-        definition = """
-        # Waveform metrics for a particular unit
-        -> master
-        -> CuratedClustering.Unit
-        ---
-        amplitude: float  # (uV) absolute difference between waveform peak and trough
-        duration: float  # (ms) time between waveform peak and trough
-        halfwidth=null: float  # (ms) spike width at half max amplitude
-        pt_ratio=null: float  # absolute amplitude of peak divided by absolute amplitude of trough relative to 0
-        repolarization_slope=null: float  # the repolarization slope was defined by fitting a regression line to the first 30us from trough to peak
-        recovery_slope=null: float  # the recovery slope was defined by fitting a regression line to the first 30us from peak to tail
-        spread=null: float  # (um) the range with amplitude above 12-percent of the maximum amplitude along the probe
-        velocity_above=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the top of the probe
-        velocity_below=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the bottom of the probe
         """
 
     def make(self, key):
@@ -819,23 +689,16 @@ class QualityMetrics(dj.Imported):
 
         curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
-        # check for manual curation and quality control file
-        kilosort.Kilosort.extract_clustering_info(
-            curation_output_dir
-        )  # this returns variables, but they aren't being used???
-
         metric_fp = curation_output_dir / "metrics.csv"
         rename_dict = {
             "isi_viol": "isi_violation",
-            "num_viol": "number_violation",
+            "num_viol": "number_violation",  # TODO: not calculated directly by AllenInstitute ecephys_spike_sorting
             "contam_rate": "contamination_rate",
         }
 
         if not metric_fp.exists():
             print("Constructing Quality Control metrics.csv file")
-
-            params = (ClusteringParamSet & key).fetch1("params")
-            results = QualityMetricsRunner(args=params).calculate()
+            results = QualityMetricsRunner().calculate(curation_output_dir)
             print(f"QualityMetricsRunner results: {results}")
 
         metrics_df = pd.read_csv(metric_fp)
@@ -844,10 +707,9 @@ class QualityMetrics(dj.Imported):
         metrics_df.columns = metrics_df.columns.str.lower()
         metrics_df.rename(columns=rename_dict, inplace=True)
         metrics_list = [
-            dict(metrics_df.loc[unit_key["unit"]], **unit_key)
+            dict(metrics_df.loc[unit_key["unit_id"]], **unit_key)
             for unit_key in (CuratedClustering.Unit & key).fetch("KEY")
         ]
 
         self.insert1(key)
         self.Cluster.insert(metrics_list, ignore_extra_fields=True)
-        self.Waveform.insert(metrics_list, ignore_extra_fields=True)

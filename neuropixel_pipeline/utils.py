@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validate_call
 from typing import Dict
 from enum import Enum
 from pathlib import Path
+import numpy as np
 import json
 
 
@@ -58,3 +59,29 @@ def dict_to_uuid(key: dict):
         hashed.update(str(k).encode())
         hashed.update(str(v).encode())
     return uuid.UUID(hex=hashed.hexdigest())
+
+
+@validate_call
+def check_for_first_bin_with_prefix(session_dir: Path, prefix: str):
+    for path in session_dir.glob("*bin"):
+        if prefix in path.stem:
+            return path
+    else:
+        raise IOError(f"No bin with {prefix} in the prefix in directory: {session_dir}")
+
+
+@validate_call
+def extract_data_from_bin(
+    bin_file: Path, num_channels: int, has_sync_channel: bool = False
+) -> np.ndarray:
+    bin_file = Path(bin_file)
+    raw_data = np.memmap(bin_file, dtype="int16", mode="r")
+    if not has_sync_channel:
+        data = np.reshape(raw_data, (int(raw_data.size / num_channels), num_channels))
+    else:
+        total_channels = num_channels + 1
+        data = np.reshape(
+            raw_data, (int(raw_data.size / total_channels), total_channels)
+        )
+        data = data[:, 0:num_channels]
+    return data
