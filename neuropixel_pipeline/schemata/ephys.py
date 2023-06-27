@@ -659,163 +659,7 @@ class CuratedClustering(dj.Imported):
         self.Unit.insert(insert_units)
 
 
-# important to note the original source of these quality metrics:
-#   https://allensdk.readthedocs.io/en/latest/
-#   https://github.com/AllenInstitute/ecephys_spike_sorting
-#
-@schema
-class WaveformSet(dj.Imported):
-    """A set of spike waveforms for units out of a given CuratedClustering."""
-
-    definition = """
-    # A set of spike waveforms for units out of a given CuratedClustering
-    -> CuratedClustering
-    """
-
-    class PeakWaveform(dj.Part):
-        """Mean waveform across spikes for a given unit."""
-
-        definition = """
-        # Mean waveform across spikes for a given unit at its representative electrode
-        -> master
-        -> CuratedClustering.Unit
-        ---
-        peak_electrode_waveform: longblob  # (uV) mean waveform for a given unit at its representative electrode
-        """
-
-    class Waveform(dj.Part):
-        """Spike waveforms for a given unit."""
-
-        definition = """
-        # Spike waveforms and their mean across spikes for the given unit
-        -> master
-        -> CuratedClustering.Unit
-        -> probe.ElectrodeConfig.Electrode
-        ---
-        waveform_mean: longblob   # (uV) mean waveform across spikes of the given unit
-        waveforms=null: longblob  # (uV) (spike x sample) waveforms of a sampling of spikes at the given electrode for the given unit
-        """
-
-    def make(self, key):
-        """Populates waveform tables."""
-        curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
-
-        kilosort_dataset = kilosort.Kilosort(curation_output_dir)
-
-        acq_software, probe_serial_number = (
-            EphysRecording * ProbeInsertion & key
-        ).fetch1("acq_software", "probe")
-
-        # -- Get channel and electrode-site mapping
-        recording_key = (EphysRecording & key).fetch1("KEY")
-        channel2electrodes = get_neuropixels_channel2electrode_map(
-            recording_key, acq_software
-        )
-
-        is_qc = (Curation & key).fetch1("quality_control")
-
-        # Get all units
-        units = {
-            u["unit"]: u
-            for u in (CuratedClustering.Unit & key).fetch(as_dict=True, order_by="unit")
-        }
-
-        if is_qc:
-            unit_waveforms = np.load(
-                curation_output_dir / "mean_waveforms.npy"
-            )  # unit x channel x sample
-
-            def yield_unit_waveforms():
-                for unit_no, unit_waveform in zip(
-                    kilosort_dataset.data["cluster_ids"], unit_waveforms
-                ):
-                    unit_peak_waveform = {}
-                    unit_electrode_waveforms = []
-                    if unit_no in units:
-                        for channel, channel_waveform in zip(
-                            kilosort_dataset.data["channel_map"], unit_waveform
-                        ):
-                            unit_electrode_waveforms.append(
-                                {
-                                    **units[unit_no],
-                                    **channel2electrodes[channel],
-                                    "waveform_mean": channel_waveform,
-                                }
-                            )
-                            if (
-                                channel2electrodes[channel]["electrode"]
-                                == units[unit_no]["electrode"]
-                            ):
-                                unit_peak_waveform = {
-                                    **units[unit_no],
-                                    "peak_electrode_waveform": channel_waveform,
-                                }
-                    yield unit_peak_waveform, unit_electrode_waveforms
-
-        else:
-            if acq_software == "LabviewV1":
-                neuropixels_recording = labview.LabviewNeuropixelMeta.from_h5(
-                    key["file_path"]
-                )
-                TODO()
-            elif acq_software == "SpikeGLX":
-                spikeglx_meta_filepath = get_spikeglx_meta_filepath(key)
-                neuropixels_recording = spikeglx.SpikeGLX(spikeglx_meta_filepath.parent)
-            elif acq_software == "Open Ephys":
-                session_path = find_full_path(
-                    get_ephys_root_data_dir(), get_session_directory(key)
-                )
-                openephys_dataset = openephys.OpenEphys(session_path)
-                neuropixels_recording = openephys_dataset.probes[probe_serial_number]
-            else:
-                raise NotImplementedError(f"for acq_software == {acq_software}")
-
-            def yield_unit_waveforms():
-                for unit_dict in units.values():
-                    unit_peak_waveform = {}
-                    unit_electrode_waveforms = []
-
-                    spikes = unit_dict["spike_times"]
-                    waveforms = neuropixels_recording.extract_spike_waveforms(
-                        spikes, kilosort_dataset.data["channel_map"]
-                    )  # (sample x channel x spike)
-                    waveforms = waveforms.transpose(
-                        (1, 2, 0)
-                    )  # (channel x spike x sample)
-                    for channel, channel_waveform in zip(
-                        kilosort_dataset.data["channel_map"], waveforms
-                    ):
-                        unit_electrode_waveforms.append(
-                            {
-                                **unit_dict,
-                                **channel2electrodes[channel],
-                                "waveform_mean": channel_waveform.mean(axis=0),
-                                "waveforms": channel_waveform,
-                            }
-                        )
-                        if (
-                            channel2electrodes[channel]["electrode"]
-                            == unit_dict["electrode"]
-                        ):
-                            unit_peak_waveform = {
-                                **unit_dict,
-                                "peak_electrode_waveform": channel_waveform.mean(
-                                    axis=0
-                                ),
-                            }
-
-                    yield unit_peak_waveform, unit_electrode_waveforms
-
-        # insert waveform on a per-unit basis to mitigate potential memory issue
-        self.insert1(key)
-        for unit_peak_waveform, unit_electrode_waveforms in yield_unit_waveforms():
-            if unit_peak_waveform:
-                self.PeakWaveform.insert1(unit_peak_waveform, ignore_extra_fields=True)
-            if unit_electrode_waveforms:
-                self.Waveform.insert(unit_electrode_waveforms, ignore_extra_fields=True)
-
-
-# important to note the original source of these quality metrics:
+# important to note the original source of these quality metric calculations:
 #   https://allensdk.readthedocs.io/en/latest/
 #   https://github.com/AllenInstitute/ecephys_spike_sorting
 #
@@ -837,39 +681,10 @@ class QualityMetrics(dj.Imported):
         -> CuratedClustering.Unit
         ---
         firing_rate=null: float # (Hz) firing rate for a unit
-        snr=null: float  # signal-to-noise ratio for a unit
         presence_ratio=null: float  # fraction of time in which spikes are present
         isi_violation=null: float   # rate of ISI violation as a fraction of overall rate
         number_violation=null: int  # total number of ISI violations
         amplitude_cutoff=null: float  # estimate of miss rate based on amplitude histogram
-        isolation_distance=null: float  # distance to nearest cluster in Mahalanobis space
-        l_ratio=null: float  #
-        d_prime=null: float  # Classification accuracy based on LDA
-        nn_hit_rate=null: float  # Fraction of neighbors for target cluster that are also in target cluster
-        nn_miss_rate=null: float # Fraction of neighbors outside target cluster that are in target cluster
-        silhouette_score=null: float  # Standard metric for cluster overlap
-        max_drift=null: float  # Maximum change in spike depth throughout recording
-        cumulative_drift=null: float  # Cumulative change in spike depth throughout recording
-        contamination_rate=null: float #
-        """
-
-    class Waveform(dj.Part):
-        """Waveform metrics for a particular unit."""
-
-        definition = """
-        # Waveform metrics for a particular unit
-        -> master
-        -> CuratedClustering.Unit
-        ---
-        amplitude: float  # (uV) absolute difference between waveform peak and trough
-        duration: float  # (ms) time between waveform peak and trough
-        halfwidth=null: float  # (ms) spike width at half max amplitude
-        pt_ratio=null: float  # absolute amplitude of peak divided by absolute amplitude of trough relative to 0
-        repolarization_slope=null: float  # the repolarization slope was defined by fitting a regression line to the first 30us from trough to peak
-        recovery_slope=null: float  # the recovery slope was defined by fitting a regression line to the first 30us from peak to tail
-        spread=null: float  # (um) the range with amplitude above 12-percent of the maximum amplitude along the probe
-        velocity_above=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the top of the probe
-        velocity_below=null: float  # (s/m) inverse velocity of waveform propagation from the soma toward the bottom of the probe
         """
 
     def make(self, key):
@@ -878,29 +693,16 @@ class QualityMetrics(dj.Imported):
 
         curation_output_dir = Path((Curation & key).fetch1("curation_output_dir"))
 
-        # check for manual curation and quality control file
-        kilosort.Kilosort.extract_clustering_info(
-            curation_output_dir
-        )  # this returns variables, but they aren't being used???
-
         metric_fp = curation_output_dir / "metrics.csv"
         rename_dict = {
             "isi_viol": "isi_violation",
-            "num_viol": "number_violation",
+            "num_viol": "number_violation",  # TODO: not calculated directly by AllenInstitute ecephys_spike_sorting
             "contam_rate": "contamination_rate",
         }
 
         if not metric_fp.exists():
             print("Constructing Quality Control metrics.csv file")
-            # not good to have the prefix here, this is atlab specific
-            # NEUROPIXEL_PREFIX = "NPElectrophysiology"
-            # session_dir = Path((EphysFile & key).fetch1("session_path"))
-            # bin_file = check_for_first_bin_with_prefix(session_dir, NEUROPIXEL_PREFIX)
-            results = QualityMetricsRunner().calculate(
-                # bin_file=bin_file,
-                kilosort_output_dir=curation_output_dir,
-                # has_sync_channel=True,  # has_sync_channel = True is also atlab specific
-            )
+            results = QualityMetricsRunner().calculate(curation_output_dir)
             print(f"QualityMetricsRunner results: {results}")
 
         metrics_df = pd.read_csv(metric_fp)
@@ -909,10 +711,9 @@ class QualityMetrics(dj.Imported):
         metrics_df.columns = metrics_df.columns.str.lower()
         metrics_df.rename(columns=rename_dict, inplace=True)
         metrics_list = [
-            dict(metrics_df.loc[unit_key["unit"]], **unit_key)
+            dict(metrics_df.loc[unit_key["unit_id"]], **unit_key)
             for unit_key in (CuratedClustering.Unit & key).fetch("KEY")
         ]
 
         self.insert1(key)
         self.Cluster.insert(metrics_list, ignore_extra_fields=True)
-        self.Waveform.insert(metrics_list, ignore_extra_fields=True)

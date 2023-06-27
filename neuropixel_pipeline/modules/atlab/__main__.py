@@ -161,7 +161,6 @@ class AtlabParams(BaseModel):
         logging.info("done with clustering section")
 
         logging.info("starting post-clustering section")
-        # ephys.WaveformSet.populate()
         ephys.QualityMetrics.populate()
         logging.info("done with post-clustering section")
 
